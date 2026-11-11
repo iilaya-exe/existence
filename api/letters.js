@@ -1,19 +1,15 @@
 // Short links. The browser encrypts a letter with a random key before it gets here, so this
 // stores only ciphertext it cannot read; the key stays after the "#" in the link.
 //
-//   GET  /api/letters            -> { ok }             are short links switched on?
-//   POST /api/letters {v,i,c,o}  -> { id }             store one encrypted letter
-//   GET  /api/letters?id=…       -> { v,i,c,o }        fetch it; 423 { openAt } while it is still sealed
-//
-// "o" is the open date (ms). It is kept in the clear beside the ciphertext so a sealed letter
-// cannot be fetched early, however the link is opened.
+//   GET  /api/letters           -> { ok }          are short links switched on?
+//   POST /api/letters {v,i,c}   -> { id }          store one encrypted letter
+//   GET  /api/letters?id=…      -> { v,i,c }       fetch it
 //
 // Storage is Upstash Redis over REST (Vercel: Storage -> Upstash for Redis). Without it this
 // answers 503 and the app falls back to long links that carry the whole letter.
 const crypto = require("crypto");
 
 const MAX_CIPHER_CHARS = 4000000;         // about 3 MB of letter; Vercel caps request bodies at 4.5 MB
-const MAX_SEAL_MS = 20 * 365 * 86400000;  // a letter can wait up to twenty years
 const PER_HOUR = 40;                      // letters one address may store per hour
 const B64U = /^[A-Za-z0-9_-]+$/;
 const ID = /^[A-Za-z0-9]{10}$/;
@@ -80,8 +76,7 @@ function createHandler(deps) {
         const raw = await store.get("letter:" + id);
         if (!raw) return send(404, { error: "not_found" });
         const rec = typeof raw === "string" ? JSON.parse(raw) : raw;
-        if (rec.o && rec.o > now()) return send(423, { error: "sealed", openAt: rec.o, now: now() });
-        return send(200, { v: 1, i: rec.i, c: rec.c, o: rec.o || 0 });
+        return send(200, { v: 1, i: rec.i, c: rec.c });
       }
 
       if (req.method === "POST") {
@@ -90,14 +85,12 @@ function createHandler(deps) {
           typeof body.i === "string" && B64U.test(body.i) && body.i.length === 16 &&
           typeof body.c === "string" && B64U.test(body.c) && body.c.length >= 24 && body.c.length <= MAX_CIPHER_CHARS;
         if (!ok) return send(400, { error: body && typeof body.c === "string" && body.c.length > MAX_CIPHER_CHARS ? "too_large" : "bad_request" });
-        const o = Number(body.o) || 0;
-        if (!Number.isFinite(o) || o < 0 || o > now() + MAX_SEAL_MS) return send(400, { error: "bad_date" });
 
         const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
         const who = crypto.createHash("sha256").update(ip).digest("hex").slice(0, 16); // never store the address itself
         if ((await store.hit(`rate:${who}:${Math.floor(now() / 3600000)}`, 3700)) > PER_HOUR) return send(429, { error: "slow_down" });
 
-        const value = JSON.stringify({ i: body.i, c: body.c, o: Math.floor(o) });
+        const value = JSON.stringify({ i: body.i, c: body.c });
         for (let tries = 0; tries < 4; tries++) {
           const newid = newId();
           if (await store.setNew("letter:" + newid, value)) return send(201, { id: newid });

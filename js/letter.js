@@ -1,6 +1,5 @@
-// The recipient's side. In order: read the letter out of the link, wait if it is sealed until a
-// date, ask for the passphrase if it is locked, then: their name and falling stars -> a tap ->
-// music and the bouquet -> an envelope under the flowers -> the letter on paper.
+// The recipient's side. In order: read the letter out of the link, then: their name and falling
+// stars -> a tap -> music and the bouquet -> an envelope under the flowers -> the letter on paper.
 (function () {
   "use strict";
   const T = window.Tenderly;
@@ -11,12 +10,14 @@
   const PREVIEW = new URLSearchParams(location.search).get("preview") === "1"; // the composer's live preview: no gate, no sound
   const KEEP = window.__TENDERLY_KEEPSAKE || null; // a saved keepsake file carries its letter, music and home address inside
   const HOME = KEEP ? KEEP.home : /letter\.html$/.test(location.pathname) ? "./" : "/";
-  const MUSIC = KEEP ? KEEP.audio : "/audio/bloom.mp3";
+  const MUSIC = KEEP ? KEEP.audio : "audio/bloom.mp3";
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Opened straight from a folder, pages have no real origin to name or compare, so the preview
+  // messages are checked by which window sent them instead.
+  const FROM_FOLDER = location.protocol === "file:" || location.origin === "null";
 
   let letter = null;
   let scene = null;
-  let skew = 0; // server clock minus this device's clock, when we know it
 
   const show = (el) => { el.hidden = false; };
   const hide = (el) => { el.hidden = true; };
@@ -38,19 +39,11 @@
   }
 
   async function fetchShort(id, key) {
-    for (;;) {
-      let r;
-      try { r = await fetch("/api/letters?id=" + id, { cache: "no-store" }); } catch (e) { throw fail("offline"); }
-      if (r.status === 423) { // still sealed: the server will not hand it over yet
-        const j = await r.json();
-        skew = j.now - Date.now();
-        await sealedUntil(j.openAt, "");
-        continue;
-      }
-      if (r.status === 404) throw fail("gone");
-      if (!r.ok) throw fail("offline");
-      try { return await codec.unlockFromServer(await r.json(), key); } catch (e) { throw fail("broken"); }
-    }
+    let r;
+    try { r = await fetch("/api/letters?id=" + id, { cache: "no-store" }); } catch (e) { throw fail("offline"); }
+    if (r.status === 404) throw fail("gone");
+    if (!r.ok) throw fail("offline");
+    try { return await codec.unlockFromServer(await r.json(), key); } catch (e) { throw fail("broken"); }
   }
 
   function showBroken(kind) {
@@ -63,53 +56,6 @@
     if (words) { $("brokenTitle").textContent = words[0]; $("brokenNote").textContent = words[1]; }
     $("brokenHome").href = HOME;
     show($("broken"));
-  }
-
-  // ================= sealed until a date =================
-  function sealedUntil(openAt, name) {
-    return new Promise((resolve) => {
-      const panel = $("wait");
-      $("waitFor").textContent = name ? "a letter for " + name : "a letter for you";
-      $("waitDate").textContent = new Date(openAt).toLocaleString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
-      show(panel);
-      if (!reduce) starRain($("waitRain"), () => !panel.hidden);
-      const pad = (n) => String(n).padStart(2, "0");
-      (function tick() {
-        const left = openAt - (Date.now() + skew);
-        if (left <= 0) { hide(panel); resolve(); return; }
-        const s = Math.ceil(left / 1000);
-        $("cD").textContent = Math.floor(s / 86400);
-        $("cH").textContent = pad(Math.floor((s % 86400) / 3600));
-        $("cM").textContent = pad(Math.floor((s % 3600) / 60));
-        $("cS").textContent = pad(s % 60);
-        setTimeout(tick, Math.min(250, left));
-      })();
-    });
-  }
-
-  // ================= locked with a passphrase =================
-  function askPassphrase(sealed) {
-    return new Promise((resolve) => {
-      const panel = $("lock"), input = $("lockInput"), btn = $("lockBtn"), err = $("lockErr");
-      show(panel);
-      input.focus();
-      $("lockForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        if (btn.disabled) return;
-        btn.disabled = true;
-        btn.textContent = "Unlocking…";
-        try {
-          const raw = await codec.unseal(sealed, input.value);
-          hide(panel);
-          resolve(raw);
-        } catch (ex) {
-          show(err);
-          btn.disabled = false;
-          btn.textContent = "Unlock";
-          input.select();
-        }
-      });
-    });
   }
 
   // ================= falling stars (from Rebloom's opening screen) =================
@@ -518,7 +464,8 @@
     document.body.classList.add("preview");
     let first = true;
     window.addEventListener("message", (e) => {
-      if (e.origin !== location.origin || !e.data || e.data.type !== "tenderly-preview") return;
+      if (e.source !== window.parent || !e.data || e.data.type !== "tenderly-preview") return;
+      if (!FROM_FOLDER && e.origin !== location.origin) return;
       const prev = letter;
       letter = codec.tidy(e.data.letter);
       setWords();
@@ -537,17 +484,13 @@
       if (e.data.show === "letter") { envelope.classList.add("open"); openSheet(true); }
       else if (sheetOpen) { closeSheet(); envelope.classList.remove("open"); $("envLabel").textContent = "tap to open your letter"; }
     });
-    if (window.parent !== window) window.parent.postMessage({ type: "tenderly-preview-ready" }, location.origin);
+    if (window.parent !== window) window.parent.postMessage({ type: "tenderly-preview-ready" }, FROM_FOLDER ? "*" : location.origin);
   }
 
   // ================= begin =================
   async function main() {
     if (PREVIEW) { previewMode(); return; }
-    let sealed;
-    try { sealed = await load(); } catch (e) { showBroken(e.kind); return; }
-    const locked = codec.isLocked(sealed);
-    if (sealed.o && sealed.o > Date.now() + skew) await sealedUntil(sealed.o, locked ? "" : codec.line(sealed.d.to, 40));
-    letter = codec.tidy(locked ? await askPassphrase(sealed) : sealed.d);
+    try { letter = codec.tidy(await load()); } catch (e) { showBroken(e.kind); return; }
     fillPaper();
     openGate();
   }

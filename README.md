@@ -12,10 +12,10 @@ Tenderly combines two earlier projects:
 | From **Lindbloom** (the letter) | From **Rebloom** (the moment) |
 | --- | --- |
 | Long letters, paper styles, photos with captions, a voice note | The bouquet that grows and sways on a night sky, with music |
-| Seal a letter until a date, with a live countdown | The opening screen: their name, falling stars, "tap to open" |
-| Lock a letter with a passphrase (real encryption) | Link previews in chat apps, heart-shaped QR codes |
-| The letter lives in the link, not on a server | A live preview of the real page while you write |
-| Envelope and wax seal, save the letter as an image | Automatic step-down on slow phones, a no-WebGL fallback |
+| The letter lives in the link, not on a server | The opening screen: their name, falling stars, "tap to open" |
+| Envelope and wax seal, save the letter as an image | Link previews in chat apps, heart-shaped QR codes |
+| | A live preview of the real page while you write |
+| | Automatic step-down on slow phones, a no-WebGL fallback |
 
 New here: **peonies** and a new **painted lily** (both painted from scratch, replacing
 Lindbloom's flowers), arranged alone or together in one bouquet; a painted look as well as
@@ -24,15 +24,10 @@ themselves, a "Write back" button, and a keepsake file.
 
 ## Privacy
 
-- **Private by default.** The link preview says only "A letter is waiting for you". Names appear
-  in the preview only if the sender ticks *Show our names in the link preview*.
+- **The link preview names no one.** Chat apps show only "A letter is waiting for you".
 - **Long links** carry the whole letter after the `#`. Browsers never send that part to a server.
 - **Short links** (`/s/Ab3k9xQz2m#k=…`): the browser encrypts the letter with a random key before
   uploading it. The server stores ciphertext it cannot read; the key exists only in the link.
-- **Passphrase**: AES-GCM with a key derived from the passphrase (PBKDF2, 210,000 rounds).
-- **Sealed until a date**: with a short link the server refuses to hand the letter over before
-  the moment arrives. With a long link the seal is only a countdown (the letter is in the link),
-  so add a passphrase if it must not be read early.
 - No analytics, no cookies. The only thing kept in the browser is the sender's own draft.
 
 ## Deploy on Vercel
@@ -53,6 +48,10 @@ npm run dev
 
 Opens on http://localhost:8080 with the same routes as Vercel. Short links are kept in memory
 until you stop it. `NO_STORE=1 npm run dev` shows how the site behaves without storage.
+
+You can also just open `index.html` from the folder. Writing, the live preview and sending all
+work that way; links are long ones that point at the `letter.html` beside it, and the keepsake
+file can't be made (browsers don't let a page read its neighbouring files from a folder).
 
 ```bash
 npm test

@@ -123,21 +123,6 @@
           </div>
         </section>
 
-        <section class="card">
-          <h2>How it arrives <span class="opt">optional</span></h2>
-          <div class="field">
-            <label for="openAt">Keep it sealed until</label>
-            <input id="openAt" type="datetime-local">
-            <p class="tip" id="sealTip">Send it early. They see a countdown, and it opens by itself at that moment.</p>
-          </div>
-          <div class="field">
-            <label for="pass">Lock it with a passphrase</label>
-            <input id="pass" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="80" placeholder="Something only they would know">
-            <p class="tip">Only someone who knows it can read the letter. Tell it to them yourself.</p>
-          </div>
-          <label class="check"><input type="checkbox" id="names"><span>Show our names in the link preview<small>Off: chat apps show only "A letter is waiting for you". On: "A letter for <span id="namesEx">Riya</span>", and the two names become part of the link.</small></span></label>
-        </section>
-
         <button class="btn primary big" type="submit" id="make">Seal the letter</button>
         <p class="tip center" id="privacy">Your words are locked in your browser before they go anywhere. This site cannot read them.</p>
         <p class="tip center" id="draftNote" hidden>Draft saved on this device.</p>

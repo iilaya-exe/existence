@@ -9,12 +9,14 @@
 
   const to = $("to"), from = $("from"), msg = $("msg"), pv = $("pv");
   const DRAFT_KEY = "tenderly-draft-v1";
+  // Opened straight from a folder, pages have no real origin to name or compare, so the preview
+  // messages are checked by which window sent them instead.
+  const FROM_FOLDER = location.protocol === "file:" || location.origin === "null";
 
   // What the site can do here. "short": encrypted short links (Vercel + storage).
   // "long": the server is there but has no storage. "static": plain file hosting, no server at all.
   let mode = "static";
-  const ready = fetch("api/letters", { cache: "no-store" })
-    .then((r) => (r.ok ? r.json() : null))
+  const ready = (FROM_FOLDER ? Promise.resolve(null) : fetch("api/letters", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)))
     .then((j) => { if (j && typeof j.ok === "boolean") mode = j.ok ? "short" : "long"; })
     .catch(() => {});
 
@@ -42,7 +44,8 @@
   let pvReady = false, show = "flowers", pvTimer = 0;
   pv.src = "letter.html?preview=1";
   window.addEventListener("message", (e) => {
-    if (e.origin !== location.origin || !e.data || e.data.type !== "tenderly-preview-ready") return;
+    if (e.source !== pv.contentWindow || !e.data || e.data.type !== "tenderly-preview-ready") return;
+    if (!FROM_FOLDER && e.origin !== location.origin) return;
     pvReady = true;
     pushPreview();
   });
@@ -51,7 +54,7 @@
     const letter = gather();
     letter.voice = null; // the preview never plays sound
     if (!letter.msg) letter.msg = "Your words will appear here as you write.";
-    pv.contentWindow.postMessage({ type: "tenderly-preview", letter, show }, location.origin);
+    pv.contentWindow.postMessage({ type: "tenderly-preview", letter, show }, FROM_FOLDER ? "*" : location.origin);
   }
   function setTab(next) {
     show = next;
@@ -70,7 +73,7 @@
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         to: to.value, from: from.value, msg: msg.value,
         paper: radio("paper"), hand: radio("hand"), flower: radio("flower"), look: radio("look"),
-        music: $("music").checked, names: $("names").checked,
+        music: $("music").checked,
       }));
       $("draftNote").hidden = !(to.value || from.value || msg.value);
     } catch (e) { /* private window or storage full: the page works without drafts */ }
@@ -82,7 +85,6 @@
       to.value = d.to || ""; from.value = d.from || ""; msg.value = d.msg || "";
       ["paper", "hand", "flower", "look"].forEach((k) => d[k] && setRadio(k, d[k]));
       $("music").checked = d.music !== false;
-      $("names").checked = !!d.names;
       $("draftNote").hidden = !(to.value || from.value || msg.value);
     }
     // "Write back" on a letter lands here with the two names swapped (after the "#", so no server sees them)
@@ -97,7 +99,6 @@
   function onInput() {
     $("count").textContent = msg.value.length + " / 4000";
     if (msg.value.trim()) $("msgErr").hidden = true;
-    $("namesEx").textContent = codec.line(to.value, 40) || "Riya";
     clearTimeout(pvTimer);
     pvTimer = setTimeout(() => { pushPreview(); saveDraft(); }, 180);
   }
@@ -224,44 +225,28 @@
   // ================= sealing and sending =================
   let current = { link: "", fragment: "", letter: null };
 
-  function openAtValue() {
-    const v = $("openAt").value;
-    if (!v) return 0;
-    const t = new Date(v).getTime();
-    return Number.isFinite(t) ? t : 0;
-  }
-
   $("f").addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = $("make");
     if (btn.disabled) return;
     const letter = gather();
     if (!letter.msg) { $("msgErr").hidden = false; msg.focus(); return; }
-    const openAt = openAtValue();
-    if (openAt && openAt <= Date.now()) { $("sealTip").textContent = "That moment has already passed. Pick one in the future, or clear the date."; $("sealTip").classList.add("warn"); $("openAt").focus(); return; }
-    $("sealTip").classList.remove("warn");
 
     btn.disabled = true;
     btn.textContent = "Sealing…";
     try {
       await ready;
-      const passphrase = $("pass").value;
-      const sealed = await codec.seal(letter, { passphrase, openAt });
-      const fragment = await codec.toFragment(sealed);
-      // names go in the readable part of the link only if the sender asked for them in the preview
-      const q = $("names").checked && mode !== "static" && letter.to
-        ? "?t=" + encodeURIComponent(letter.to).replace(/%20/g, "+") + (letter.from ? "&f=" + encodeURIComponent(letter.from).replace(/%20/g, "+") : "")
-        : "";
+      const fragment = await codec.toFragment(letter);
       let link = "", kind = "long";
       if (mode === "short") {
         try {
-          const { key, record } = await codec.lockForServer(sealed);
+          const { key, record } = await codec.lockForServer(letter);
           const r = await fetch("api/letters", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(record) });
-          if (r.ok) { link = location.origin + "/s/" + (await r.json()).id + q + "#k=" + key; kind = "short"; }
+          if (r.ok) { link = location.origin + "/s/" + (await r.json()).id + "#k=" + key; kind = "short"; }
         } catch (err) { /* fall back to a link that carries the letter itself */ }
       }
-      if (!link) link = (mode === "static" ? new URL("letter.html", location.href).href : location.origin + "/l" + q) + "#" + fragment;
-      current = { link, fragment, letter, kind, openAt, locked: !!passphrase };
+      if (!link) link = (mode === "static" ? new URL("letter.html", location.href).href : location.origin + "/l") + "#" + fragment;
+      current = { link, fragment, letter, kind };
       showResult();
     } catch (err) {
       toast("Something went wrong sealing the letter. Try again.");
@@ -271,14 +256,12 @@
   });
 
   function showResult() {
-    const { link, kind, letter, openAt, locked } = current;
+    const { link, kind, letter } = current;
     $("resultTitle").textContent = letter.to ? "Your letter for " + letter.to + " is sealed." : "Your letter is sealed.";
     const notes = [];
     if (kind === "short") notes.push("Send this link. The letter was locked in your browser first; the key is the part after the #, which never leaves the link.");
     else notes.push("Send this link. The whole letter lives inside it (after the #) and is stored nowhere else.");
     if (kind === "long" && link.length > 6000) notes.push("It is a long link because of what's tucked inside, and some chat apps cut long links short. If it arrives broken, send the keepsake file instead.");
-    if (openAt) notes.push("It stays sealed until " + new Date(openAt).toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" }) + "." + (kind === "long" && !locked ? " On a link like this the seal is a countdown, not a lock: add a passphrase if it must not be read early." : ""));
-    if (locked) notes.push("Remember to tell them the passphrase yourself.");
     $("resultNote").textContent = notes.join(" ");
     $("link").textContent = link;
     $("open").href = link;
@@ -356,11 +339,11 @@
   async function buildKeepsake() {
     const text = async (url) => { const r = await fetch(url); if (!r.ok) throw new Error(url); return r.text(); };
     let html = await text("letter.html");
-    const cssHref = /<link rel="stylesheet" href="(\/css\/[^"]+)">/.exec(html);
-    const css = await text(cssHref[1].slice(1));
+    const cssHref = /<link rel="stylesheet" href="(css\/[^"]+)">/.exec(html);
+    const css = await text(cssHref[1]);
     const scripts = [];
-    html.replace(/<script src="(\/js\/[^"]+)"><\/script>/g, (m, src) => { scripts.push(src); return m; });
-    const code = await Promise.all(scripts.map((s) => text(s.slice(1))));
+    html.replace(/<script src="(js\/[^"]+)"><\/script>/g, (m, src) => { scripts.push(src); return m; });
+    const code = await Promise.all(scripts.map((s) => text(s)));
     let audio = "";
     if (current.letter.music) {
       try { const r = await fetch("audio/bloom.mp3"); if (r.ok) audio = await blobToDataUrl(await r.blob()); } catch (e) {}
@@ -371,8 +354,7 @@
     html = html
       .replace("<!--META-->", () => "<title>" + esc(current.letter.to ? "For " + current.letter.to : "A letter for you") + "</title>")
       .replace(/<link rel="(icon|apple-touch-icon)"[^>]*>\n?/g, "")
-      .replace(cssHref[0], () => "<style>\n" + css + "\n</style>")
-      .replace("<!--GATE_NAME-->", "");
+      .replace(cssHref[0], () => "<style>\n" + css + "\n</style>");
     scripts.forEach((src, i) => {
       html = html.replace(`<script src="${src}"></script>`, () => "<script>\n" + (i === 0 ? boot + "\n" : "") + safe(code[i]) + "\n</script>");
     });
@@ -385,16 +367,13 @@
     try {
       download(await buildKeepsake(), "letter-for-" + slug(current.letter.to) + ".html");
       toast("Keepsake saved");
-    } catch (e) { toast("Couldn't build the keepsake. Check your connection."); }
+    } catch (e) { toast(location.protocol === "file:" ? "The keepsake can only be made from the website, not from a folder" : "Couldn't build the keepsake. Check your connection."); }
     btn.disabled = false;
     btn.textContent = "Download keepsake file";
   });
 
   // ================= begin =================
-  // the earliest moment a seal can be set to is now
-  (function () { const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000); $("openAt").min = d.toISOString().slice(0, 16); })();
   ready.then(() => {
-    if (mode === "static") { $("names").closest("label").hidden = true; }
     if (mode !== "short") {
       $("privacy").textContent = "Your whole letter travels inside its link. It is stored nowhere else, and this site never sees it.";
       $("photoTip").textContent = "Up to 4. They are kept small so the letter still fits in its link.";

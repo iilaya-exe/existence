@@ -7,12 +7,12 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <!--META-->
-<link rel="icon" type="image/png" href="/img/icon.png">
-<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="img/icon.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Karla:wght@400;500&display=swap">
-<link rel="stylesheet" href="/css/letter.css">
+<link rel="stylesheet" href="css/letter.css">
 </head>
 <body>
 
@@ -28,47 +28,16 @@
 <!-- opening screen: their name, falling stars. The tap also lets the music start. -->
 <button id="gate" class="gate" type="button" hidden aria-label="Open your letter">
   <canvas class="rain" id="gateRain" aria-hidden="true"></canvas>
-  <span class="gate-name" id="gateName"><!--GATE_NAME--></span>
+  <span class="gate-name" id="gateName">for you</span>
   <span class="gate-hint">tap to open</span>
 </button>
-
-<!-- sealed until a date -->
-<section id="wait" class="panel" hidden aria-live="polite">
-  <canvas class="rain" id="waitRain" aria-hidden="true"></canvas>
-  <div class="panel-in">
-    <p class="panel-eyebrow" id="waitFor">a letter for you</p>
-    <h1 class="panel-title">Sealed until</h1>
-    <p class="wait-date" id="waitDate"></p>
-    <div class="count" id="count" role="timer">
-      <div><b id="cD">0</b><span>days</span></div>
-      <div><b id="cH">0</b><span>hours</span></div>
-      <div><b id="cM">0</b><span>minutes</span></div>
-      <div><b id="cS">0</b><span>seconds</span></div>
-    </div>
-    <p class="panel-note">Keep this page or come back then. It opens by itself.</p>
-  </div>
-</section>
-
-<!-- locked with a passphrase -->
-<section id="lock" class="panel" hidden>
-  <div class="panel-in">
-    <p class="panel-eyebrow">a letter for you</p>
-    <h1 class="panel-title">This letter is locked</h1>
-    <form id="lockForm" class="lock-form">
-      <label for="lockInput">Enter the passphrase you were given</label>
-      <input id="lockInput" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required>
-      <button type="submit" id="lockBtn">Unlock</button>
-      <p class="lock-err" id="lockErr" role="alert" hidden>That passphrase didn't open it. Try again.</p>
-    </form>
-  </div>
-</section>
 
 <!-- the link could not be read -->
 <section id="broken" class="panel" hidden>
   <div class="panel-in">
     <h1 class="panel-title" id="brokenTitle">This letter lost its way.</h1>
     <p class="panel-note" id="brokenNote">The link may be incomplete. Ask whoever sent it to copy it again.</p>
-    <a class="panel-link" id="brokenHome" href="/">Write a letter</a>
+    <a class="panel-link" id="brokenHome" href="./">Write a letter</a>
   </div>
 </section>
 
@@ -112,9 +81,9 @@
   <div class="actions" id="actions">
     <button type="button" id="backBtn">Back to the flowers</button>
     <button type="button" id="saveBtn">Save as image</button>
-    <a id="replyBtn" href="/">Write back</a>
+    <a id="replyBtn" href="./">Write back</a>
   </div>
-  <p class="made"><a id="madeLink" href="/">Tenderly</a> · letters that bloom</p>
+  <p class="made"><a id="madeLink" href="./">Tenderly</a> · letters that bloom</p>
 </div>
 
 <button id="snd" class="snd" type="button" data-state="blocked" aria-label="Turn sound on" hidden>
@@ -130,15 +99,15 @@
 
 <audio id="bgm" preload="none"></audio>
 
-<script src="/js/codec.js"></script>
-<script src="/js/kit.js"></script>
-<script src="/js/peony.js"></script>
-<script src="/js/lily.js"></script>
-<script src="/js/bouquet.js"></script>
-<script src="/js/world-lilies.js"></script>
-<script src="/js/world-peonies.js"></script>
-<script src="/js/world-mixed.js"></script>
-<script src="/js/scene.js"></script>
-<script src="/js/letter.js"></script>
+<script src="js/codec.js"></script>
+<script src="js/kit.js"></script>
+<script src="js/peony.js"></script>
+<script src="js/lily.js"></script>
+<script src="js/bouquet.js"></script>
+<script src="js/world-lilies.js"></script>
+<script src="js/world-peonies.js"></script>
+<script src="js/world-mixed.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/letter.js"></script>
 </body>
 </html>

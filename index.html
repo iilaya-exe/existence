@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07060a">
+<meta name="referrer" content="no-referrer">
+<title>Tenderly · letters that bloom</title>
+<meta name="description" content="Write someone a letter. It opens for them inside a bouquet, with music, photos and your voice.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tenderly">
+<meta property="og:title" content="Tenderly · letters that bloom">
+<meta property="og:description" content="Write someone a letter. It opens for them inside a bouquet.">
+<meta property="og:image" content="/img/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="img/icon.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Karla:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/compose.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">letters that bloom</p>
+    <h1>Tenderly</h1>
+    <p class="lede">Write someone a letter. It opens for them inside a bouquet.</p>
+    <p class="reply-note" id="replyNote" hidden></p>
+  </header>
+
+  <div class="cols">
+
+    <!-- live preview: the real letter page, updated as you write -->
+    <aside class="side">
+      <div class="phone">
+        <iframe id="pv" title="Preview of the letter" tabindex="-1"></iframe>
+        <div class="shield" id="shield" aria-hidden="true"></div>
+      </div>
+      <div class="tabs" role="group" aria-label="Preview">
+        <button type="button" id="tabFlowers" aria-pressed="true">Flowers</button>
+        <button type="button" id="tabLetter" aria-pressed="false">Letter</button>
+      </div>
+      <p class="tip center">Live preview. They will first see their name, then tap to open.</p>
+    </aside>
+
+    <main>
+      <form id="f" novalidate>
+
+        <section class="card">
+          <h2>Your letter</h2>
+          <div class="row2">
+            <div class="field">
+              <label for="to">To</label>
+              <input id="to" maxlength="40" autocomplete="off" autocapitalize="words" placeholder="Their name">
+            </div>
+            <div class="field">
+              <label for="from">From</label>
+              <input id="from" maxlength="40" autocomplete="off" autocapitalize="words" placeholder="Your name">
+            </div>
+          </div>
+          <div class="field">
+            <label for="msg">What you want to say</label>
+            <textarea id="msg" rows="9" maxlength="4000" placeholder="Start anywhere. The thing you keep meaning to tell them."></textarea>
+            <div class="under"><span class="err" id="msgErr" hidden>Write a few words first.</span><span class="count" id="count">0 / 4000</span></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Their flowers</h2>
+          <div class="choices three" role="radiogroup" aria-label="Flowers">
+            <label class="choice"><input type="radio" name="flower" value="mixed" checked><span><b>Lilies &amp; peonies</b><i>lilies lead, peonies soften</i></span></label>
+            <label class="choice"><input type="radio" name="flower" value="peonies"><span><b>Peonies</b><i>soft, full, romantic</i></span></label>
+            <label class="choice"><input type="radio" name="flower" value="lilies"><span><b>Night lilies</b><i>Rebloom's original</i></span></label>
+          </div>
+          <div class="choices two" role="radiogroup" aria-label="Style">
+            <label class="choice"><input type="radio" name="look" value="painted" checked><span><b>Painted</b><i>smooth petals</i></span></label>
+            <label class="choice"><input type="radio" name="look" value="ascii"><span><b>Embroidered</b><i>stitched from tiny letters</i></span></label>
+          </div>
+          <label class="check"><input type="checkbox" id="music" checked><span>Play music while it blooms</span></label>
+        </section>
+
+        <section class="card">
+          <h2>The paper</h2>
+          <div class="swatches" role="radiogroup" aria-label="Paper">
+            <label><input type="radio" name="paper" value="ivory" checked><span class="sw sw-ivory"></span>Ivory</label>
+            <label><input type="radio" name="paper" value="blush"><span class="sw sw-blush"></span>Blush</label>
+            <label><input type="radio" name="paper" value="kraft"><span class="sw sw-kraft"></span>Kraft</label>
+            <label><input type="radio" name="paper" value="midnight"><span class="sw sw-midnight"></span>Midnight</label>
+          </div>
+          <div class="choices two" role="radiogroup" aria-label="Writing">
+            <label class="choice"><input type="radio" name="hand" value="serif" checked><span><b class="f-serif">Classic</b><i>like a printed book</i></span></label>
+            <label class="choice"><input type="radio" name="hand" value="script"><span><b class="f-script">Handwritten</b><i>like your own pen</i></span></label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Tuck something in <span class="opt">optional</span></h2>
+
+          <div class="field">
+            <span class="label">Photos</span>
+            <div class="thumbs" id="thumbs"></div>
+            <label class="btn ghost" id="photoAdd"><input type="file" id="photos" accept="image/*" multiple hidden>Add photos</label>
+            <p class="tip" id="photoTip">Up to 4. They appear under your words as taped prints.</p>
+          </div>
+
+          <div class="field">
+            <span class="label">A voice note</span>
+            <div class="voice-row" id="voiceIdle">
+              <button type="button" class="btn ghost" id="recBtn">Record</button>
+              <label class="btn ghost"><input type="file" id="voiceFile" accept="audio/*" hidden>Choose a file</label>
+            </div>
+            <div class="voice-row" id="voiceRec" hidden>
+              <span class="rec-dot" aria-hidden="true"></span><span id="recTime" role="timer">0:00</span>
+              <button type="button" class="btn" id="recStop">Stop</button>
+            </div>
+            <div class="voice-row" id="voiceDone" hidden>
+              <audio id="voicePlay" controls></audio>
+              <button type="button" class="btn ghost" id="voiceRemove">Remove</button>
+            </div>
+            <p class="tip" id="voiceTip">Up to a minute, in your own voice. The music hushes while it plays.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>How it arrives <span class="opt">optional</span></h2>
+          <div class="field">
+            <label for="openAt">Keep it sealed until</label>
+            <input id="openAt" type="datetime-local">
+            <p class="tip" id="sealTip">Send it early. They see a countdown, and it opens by itself at that moment.</p>
+          </div>
+          <div class="field">
+            <label for="pass">Lock it with a passphrase</label>
+            <input id="pass" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="80" placeholder="Something only they would know">
+            <p class="tip">Only someone who knows it can read the letter. Tell it to them yourself.</p>
+          </div>
+          <label class="check"><input type="checkbox" id="names"><span>Show our names in the link preview<small>Off: chat apps show only "A letter is waiting for you". On: "A letter for <span id="namesEx">Riya</span>", and the two names become part of the link.</small></span></label>
+        </section>
+
+        <button class="btn primary big" type="submit" id="make">Seal the letter</button>
+        <p class="tip center" id="privacy">Your words are locked in your browser before they go anywhere. This site cannot read them.</p>
+        <p class="tip center" id="draftNote" hidden>Draft saved on this device.</p>
+      </form>
+
+      <section class="card result" id="result" hidden aria-live="polite">
+        <h2 id="resultTitle">Your letter is sealed.</h2>
+        <p class="tip" id="resultNote"></p>
+        <div class="linkbox" id="link" tabindex="0"></div>
+        <div class="btnrow">
+          <button type="button" class="btn primary" id="copy">Copy link</button>
+          <button type="button" class="btn" id="share" hidden>Share…</button>
+          <a class="btn" id="open" target="_blank" rel="noopener">Open it</a>
+        </div>
+        <div class="btnrow">
+          <button type="button" class="btn ghost" id="makeqr">♥ Heart QR code</button>
+          <button type="button" class="btn ghost" id="keep">Download keepsake file</button>
+        </div>
+        <div class="qrbox" id="qrbox" hidden>
+          <canvas id="qr" width="1000" height="1000" role="img" aria-label="Heart-shaped QR code that opens the letter"></canvas>
+          <div class="btnrow">
+            <button type="button" class="btn primary" id="qrsave">Save QR</button>
+            <button type="button" class="btn" id="qrshare" hidden>Share QR</button>
+          </div>
+          <button type="button" class="linkish" id="qrstyle">Not scanning? Use a plain QR</button>
+          <p class="tip center">Print it and tuck it into a card or a gift.</p>
+        </div>
+        <p class="tip" id="keepTip">The keepsake is one file that holds the whole letter, flowers and music. It opens in any browser, forever, even offline.</p>
+        <button type="button" class="linkish" id="again">Write another letter</button>
+      </section>
+
+      <footer class="foot">
+        <p>Tenderly grew from two earlier projects, Lindbloom (the letter) and Rebloom (the bouquet).</p>
+      </footer>
+    </main>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="vendor/qrcode.js" defer></script>
+<script src="vendor/heartqr.js" defer></script>
+<script src="js/codec.js" defer></script>
+<script src="js/compose.js" defer></script>
+</body>
+</html>

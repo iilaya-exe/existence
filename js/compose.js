@@ -87,14 +87,6 @@
       $("music").checked = d.music !== false;
       $("draftNote").hidden = !(to.value || from.value || msg.value);
     }
-    // "Write back" on a letter lands here with the two names swapped (after the "#", so no server sees them)
-    if (/^#reply\b/.test(location.hash)) {
-      const q = new URLSearchParams(location.hash.slice(1));
-      const rTo = codec.line(q.get("to"), 40), rFrom = codec.line(q.get("from"), 40);
-      if (rTo) { to.value = rTo; if (rFrom) from.value = rFrom; msg.value = d && d.to === rTo ? msg.value : ""; }
-      if (rTo) { $("replyNote").textContent = "Writing back to " + rTo; $("replyNote").hidden = false; }
-      try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
-    }
   }
   function onInput() {
     $("count").textContent = msg.value.length + " / 4000";
@@ -267,7 +259,7 @@
     $("open").href = link;
     $("share").hidden = !navigator.share;
     $("qrbox").hidden = true;
-    $("makeqr").hidden = link.length > 900 || !window.drawHeartQR; // a QR can only hold a short link
+    $("makeqr").hidden = false;
     $("result").hidden = false;
     $("result").scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -293,7 +285,6 @@
     photos = []; drawThumbs(); setVoice(null);
     $("result").hidden = true;
     $("draftNote").hidden = true;
-    $("replyNote").hidden = true;
     onInput();
     window.scrollTo({ top: 0, behavior: "smooth" });
     to.focus();
@@ -311,10 +302,37 @@
   }
 
   // ---------- heart QR (from Rebloom) ----------
+  // Always offered. A QR code holds only so much, so a letter that travels inside its own link
+  // can outgrow it; then this says why instead of drawing a code no camera could read.
+  const QR_MOST = 1800; // characters; beyond this the squares get too fine to scan
+  const QR_INK = { fg: "#a31d4b", bg: "#fffaf4" };
   let plainQR = false;
+  function plainFallback(canvas, text) { // the roomiest plain code, for links the heart can't hold
+    const qr = window.qrcode(0, "L");
+    qr.addData(unescape(encodeURIComponent(text)), "Byte");
+    qr.make();
+    const n = qr.getModuleCount(), size = 1000, m = Math.floor(size / (n + 8)), off = Math.floor((size - m * n) / 2);
+    canvas.width = canvas.height = size;
+    const g = canvas.getContext("2d");
+    g.fillStyle = "#ffffff";
+    g.fillRect(0, 0, size, size);
+    g.fillStyle = "#2a1620";
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) g.fillRect(off + c * m, off + r * m, m, m);
+  }
   function drawQR() {
-    (plainQR ? window.drawPlainQR : window.drawHeartQR)($("qr"), current.link);
+    const link = current.link, canvas = $("qr");
+    let ok = !!window.qrcode && link.length <= QR_MOST, heart = false;
+    if (ok && !plainQR) { try { window.drawHeartQR(canvas, link, QR_INK); heart = true; } catch (e) { heart = false; } }
+    if (ok && !heart) { try { plainFallback(canvas, link); } catch (e) { ok = false; } }
+    $("qrdraw").hidden = !ok;
+    $("qrstyle").hidden = !ok || (!heart && !plainQR);
     $("qrstyle").textContent = plainQR ? "Back to the heart QR" : "Not scanning? Use a plain QR";
+    const tip = $("qrtip");
+    tip.classList.toggle("warn", !ok || location.protocol === "file:");
+    if (!ok) tip.textContent = "This letter is too big for a QR code: with photos, a voice note or many words the link grows longer than a code can hold. Once the site is online with short links switched on (see the README), every letter fits in a QR code. For now, a shorter letter without attachments will fit.";
+    else if (location.protocol === "file:") tip.textContent = "This code points to a file on this computer, so it only opens here. Put the site online and the code will open the letter on any phone.";
+    else if (!heart && !plainQR) tip.textContent = "This link is too long for the heart shape, so here is a plain code. Print it and tuck it into a card or a gift.";
+    else tip.textContent = "Print it and tuck it into a card or a gift.";
   }
   $("qrstyle").addEventListener("click", () => { plainQR = !plainQR; drawQR(); });
   $("makeqr").addEventListener("click", () => {
@@ -350,7 +368,7 @@
     }
     const safe = (js) => js.replace(/<\/script/gi, "<\\/script");
     const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    const boot = "window.__TENDERLY_KEEPSAKE=" + JSON.stringify({ letter: current.fragment, audio, home: new URL("./", location.href).href }).replace(/</g, "\\u003c") + ";";
+    const boot = "window.__TENDERLY_KEEPSAKE=" + JSON.stringify({ letter: current.fragment, audio }).replace(/</g, "\\u003c") + ";";
     html = html
       .replace("<!--META-->", () => "<title>" + esc(current.letter.to ? "For " + current.letter.to : "A letter for you") + "</title>")
       .replace(/<link rel="(icon|apple-touch-icon)"[^>]*>\n?/g, "")

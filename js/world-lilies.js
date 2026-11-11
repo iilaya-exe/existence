@@ -1,6 +1,6 @@
 // The lily bouquet from Rebloom: thirteen 3D lilies and two buds that grow from the bottom
-// of the screen, open, then sway in a soft breeze. Drawn in world units onto a 2D canvas;
-// js/scene.js turns that into embroidered text characters (or shows it painted).
+// of their paper wrap, open, then sway in a soft breeze. Drawn in world units onto a 2D canvas;
+// js/scene.js shows that painted, or turns it into embroidered text characters.
 (function (root) {
   "use strict";
   const T = (root.Tenderly = root.Tenderly || {});
@@ -143,7 +143,14 @@
     [  70, -205, -0.62, 190, 20, 0.08],
     [  35, -175, 0.22, 170, 20, 0.15],
   ];
-  const baseLeaves = BASE_LEAF_DEFS.map(([x, y, ang, L, w, droop], i) => ({
+  // Rebloom drew these low and drooping around bare stems. Here the stems are wrapped in paper,
+  // so each leaf starts above the paper's edge and reaches outward and up, keeping the wrap in view.
+  const liftLeaf = ([x, y, ang, L, w, droop]) => {
+    const left = Math.cos(ang) < 0, off = left ? ang - Math.PI : ang; // tilt from level: negative is upward
+    const up = -(0.1 + Math.abs(off) * 0.55);
+    return [x, y - 130, left ? Math.PI - up : up, L, w, droop * 0.6];
+  };
+  const baseLeaves = BASE_LEAF_DEFS.map(liftLeaf).map(([x, y, ang, L, w, droop], i) => ({
     x, y, ang, L, w,
     bend: (Math.cos(ang) > 0 ? 1 : -1) * L * droop,
     start: 0.35 + i * 0.06 + R() * 0.1, dur: 0.65,
@@ -412,11 +419,14 @@
     drawLily3(g, f.x + dx, f.y, A, f.spin, L, o, f.p, f.seed, 0, f.axis);
   }
 
+  let wrapName = "ivory"; // which paper the bouquet is wrapped in
   function drawWorld(g, t) {
     const stemP = new Map();
+    T.kit.wrap.back(g, wrapName, easeOut((t - 0.3) / 1.5));
     for (const st of bundle) drawStem(g, st, t, 0);
     for (const f of stayBuds) stemP.set(f, drawStem(g, f.st, t, flutter(f.seed, t)));
     for (const f of lilies) stemP.set(f, drawStem(g, f.st, t, flutter(f.seed, t)));
+    T.kit.wrap.front(g, wrapName, easeOut(t / 0.9)); // the stems are gathered inside the wrap
     for (const lf of baseLeaves) drawBaseLeaf(g, lf, t);
     for (const f of stayBuds) drawStemLeaves(g, f.st, t, stemP.get(f), flutter(f.seed, t));
     for (const f of lilies) drawStemLeaves(g, f.st, t, stemP.get(f), flutter(f.seed, t));
@@ -428,7 +438,7 @@
     for (const f of lilies) drawLily(g, f, t);
   }
 
-    // the bouquet spans about 960 x 1330 world units; its stems gather 545 units below the middle
-    return { name: "lilies", GROW_END, LOOP, FADE, frame: { w: 960, h: 1330, anchor: 545 }, setBottom: garden.setBottom, draw: drawWorld };
+    // the topmost bud ends near y = -1200; the stage (wrap, table) is shared with the other bouquets
+    return { name: "lilies", GROW_END, LOOP, FADE, frame: Object.assign({ top: -1200 }, T.kit.STAGE), setBottom: garden.setBottom, setWrap(name) { wrapName = name; }, draw: drawWorld };
   };
 })(typeof window !== "undefined" ? window : globalThis);

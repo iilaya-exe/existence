@@ -1,21 +1,22 @@
-// The recipient's side. In order: read the letter out of the link, then: their name and falling
-// stars -> a tap -> music and the bouquet -> an envelope under the flowers -> the letter on paper.
+// The recipient's side. In order: read the letter out of the link, then: their name in an empty
+// room -> a tap -> music, and a wrapped bouquet grows -> an envelope beside it -> the letter on
+// paper. It is one-way: there is nothing here for sending anything back.
 (function () {
   "use strict";
   const T = window.Tenderly;
   const codec = T.codec;
-  const { TAU, clamp } = T.kit;
+  const { clamp } = T.kit;
   const $ = (id) => document.getElementById(id);
 
   const PREVIEW = new URLSearchParams(location.search).get("preview") === "1"; // the composer's live preview: no gate, no sound
-  const KEEP = window.__TENDERLY_KEEPSAKE || null; // a saved keepsake file carries its letter, music and home address inside
-  const HOME = KEEP ? KEEP.home : /letter\.html$/.test(location.pathname) ? "./" : "/";
+  const KEEP = window.__TENDERLY_KEEPSAKE || null; // a saved keepsake file carries its letter and music inside
   const MUSIC = KEEP ? KEEP.audio : "audio/bloom.mp3";
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // Opened straight from a folder, pages have no real origin to name or compare, so the preview
   // messages are checked by which window sent them instead.
   const FROM_FOLDER = location.protocol === "file:" || location.origin === "null";
 
+  const envelope = $("envelope"), envLabel = $("envLabel");
   let letter = null;
   let scene = null;
 
@@ -54,62 +55,7 @@
       broken: ["This letter lost its way.", "The link may be incomplete. Ask whoever sent it to copy it again."],
     }[kind] || null;
     if (words) { $("brokenTitle").textContent = words[0]; $("brokenNote").textContent = words[1]; }
-    $("brokenHome").href = HOME;
     show($("broken"));
-  }
-
-  // ================= falling stars (from Rebloom's opening screen) =================
-  // text-character stars drift down at a slant, each with a fading tail; stops when alive() says so
-  function starRain(cv, alive) {
-    const cx = cv.getContext("2d");
-    const GLYPHS = ["*", "+", "✦", "·", "✧"];
-    const TINTS = ["255,255,255", "255,236,200", "200,220,255", "255,205,215"];
-    let w = 0, h = 0, stars = [], last = 0;
-    function size() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      w = cv.clientWidth; h = cv.clientHeight;
-      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-      cx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    function spawn(anywhere) {
-      const z = 0.4 + Math.random() * 0.6; // depth: nearer stars are bigger, brighter and faster
-      return {
-        x: Math.random() * (w + h * 0.35) - h * 0.1,
-        y: anywhere ? Math.random() * h : -20 - Math.random() * h * 0.3,
-        v: (40 + Math.random() * 70) * z, z,
-        g: GLYPHS[(Math.random() * GLYPHS.length) | 0],
-        c: TINTS[(Math.random() * TINTS.length) | 0],
-        tw: Math.random() * TAU,
-      };
-    }
-    size();
-    const count = clamp(Math.round((w * h) / 9000), 24, 90);
-    for (let i = 0; i < count; i++) stars.push(spawn(true));
-    window.addEventListener("resize", size);
-    function tick(now) {
-      if (!alive()) { window.removeEventListener("resize", size); return; }
-      const dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
-      last = now;
-      cx.clearRect(0, 0, w, h);
-      cx.textAlign = "center"; cx.textBaseline = "middle";
-      for (let i = 0; i < stars.length; i++) {
-        const s = stars[i];
-        s.y += s.v * dt; s.x -= s.v * 0.35 * dt; s.tw += dt * 3;
-        if (s.y > h + 20 || s.x < -40) { stars[i] = spawn(false); continue; }
-        const a = (0.35 + 0.65 * s.z) * (0.75 + 0.25 * Math.sin(s.tw));
-        const tail = 10 + s.v * 0.22;
-        const grad = cx.createLinearGradient(s.x, s.y, s.x + tail * 0.35, s.y - tail);
-        grad.addColorStop(0, `rgba(${s.c},${(a * 0.45).toFixed(3)})`);
-        grad.addColorStop(1, `rgba(${s.c},0)`);
-        cx.strokeStyle = grad; cx.lineWidth = 1;
-        cx.beginPath(); cx.moveTo(s.x, s.y); cx.lineTo(s.x + tail * 0.35, s.y - tail); cx.stroke();
-        cx.fillStyle = `rgba(${s.c},${a.toFixed(3)})`;
-        cx.font = `${Math.round(8 + 8 * s.z)}px ui-monospace, Menlo, Consolas, monospace`;
-        cx.fillText(s.g, s.x, s.y);
-      }
-      requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
   }
 
   // ================= music =================
@@ -164,12 +110,26 @@
 
   // ================= the bouquet =================
   function buildScene() {
-    scene = T.createScene($("stage"), { world: letter.flower, look: letter.look, reserveTop: 0.15, autoQuality: !PREVIEW });
+    scene = T.createScene($("stage"), { world: letter.flower, look: letter.look, wrap: letter.paper, autoQuality: !PREVIEW }); // the bouquet is wrapped in the letter's paper
     scene.fadeSource = musicFade;
+    scene.onLayout = placeEnvelope;
+    placeEnvelope(scene.metrics());
     scene.onGrown = () => {
       $("hello").classList.add("show");
-      setTimeout(() => { show($("envelope")); requestAnimationFrame(() => requestAnimationFrame(() => $("envelope").classList.add("in"))); }, reduce ? 0 : 700);
+      setTimeout(() => {
+        show(envelope); show(envLabel);
+        requestAnimationFrame(() => requestAnimationFrame(() => { envelope.classList.add("in"); envLabel.classList.add("in"); }));
+      }, reduce ? 0 : 700);
     };
+  }
+  // The envelope rests on the table to the right of the wrapped stems, clear of the flowers.
+  // m: where the stage sits on screen (see scene.metrics); world units below are the stage's.
+  function placeEnvelope(m) {
+    const w = clamp(340 * m.scale, 104, 250);
+    const x = Math.min(m.x + 286 * m.scale, window.innerWidth - w / 2 - 10);
+    envelope.style.setProperty("--ew", w.toFixed(1) + "px");
+    envelope.style.setProperty("--ex", x.toFixed(1) + "px");
+    envelope.style.setProperty("--ey", (m.table + 150 * m.scale).toFixed(1) + "px");
   }
   function setWords() {
     $("gateName").textContent = letter.to || "for you";
@@ -185,7 +145,6 @@
     setupMusic();
     buildScene();
     show(gate);
-    if (!reduce) starRain($("gateRain"), () => !gate.hidden);
     gate.addEventListener("click", () => {
       if (musicOn) { bgm.muted = false; startMusic(true); show(snd); }
       gate.classList.add("leaving");
@@ -195,20 +154,16 @@
   }
 
   // ================= the envelope and the letter =================
-  const envelope = $("envelope"), sheet = $("sheet"), paper = $("paper");
+  const sheet = $("sheet"), paper = $("paper");
   let typed = false, sheetOpen = false, stopTyping = null;
 
   const SPRIGS = { ivory: ["blush", "rose"], blush: ["cream", "rose"], kraft: ["cream", "coral"], midnight: ["blush", "lilac"] };
   function fillPaper() {
     paper.className = "paper " + letter.paper + (letter.hand === "script" ? " script" : "");
     $("sprig").src = T.peony.sprig(380, SPRIGS[letter.paper] || SPRIGS.ivory, 7);
-    $("pDate").textContent = letter.sent ? new Date(letter.sent).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : "";
     $("pTo").textContent = letter.to ? "For " + letter.to : "For you";
     $("pFrom").textContent = letter.from ? "— " + letter.from : "";
     $("pFrom").hidden = !letter.from;
-    $("replyBtn").href = HOME + "#reply&to=" + encodeURIComponent(letter.from) + "&from=" + encodeURIComponent(letter.to);
-    $("replyBtn").hidden = !letter.from;
-    $("madeLink").href = HOME;
 
     const box = $("photos");
     box.textContent = "";
@@ -262,6 +217,7 @@
     sheetOpen = true;
     $("hello").classList.add("dim");
     envelope.classList.add("away");
+    envLabel.classList.remove("in");
     show(sheet);
     sheet.scrollTop = 0;
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -277,8 +233,9 @@
     voiceAudio.pause();
     sheet.classList.remove("in");
     $("hello").classList.remove("dim");
-    $("envLabel").textContent = "read it again";
+    envLabel.textContent = "read it again";
     envelope.classList.remove("away");
+    envLabel.classList.add("in");
     setTimeout(() => { if (!sheetOpen) hide(sheet); }, reduce ? 0 : 700);
   }
   envelope.addEventListener("click", () => {
@@ -286,6 +243,7 @@
     envelope.classList.add("open");
     setTimeout(openSheet, reduce ? 0 : 1350);
   });
+  envLabel.addEventListener("click", () => envelope.click());
   $("backBtn").addEventListener("click", closeSheet);
 
   // ---------- voice note ----------
@@ -384,7 +342,7 @@
       const photoRows = Math.ceil(photos.length / cols);
       const photoH = photoRows ? photoRows * (cell + 78) + (photoRows - 1) * gap + 60 : 0;
 
-      const top = PAD + 70;
+      const top = PAD + 62; // the words begin below the sprig in the corner
       const H = Math.ceil(top + 96 + lines.length * LH + (letter.from ? 110 : 30) + photoH + 120);
       const c = document.createElement("canvas");
       c.width = W; c.height = H;
@@ -400,20 +358,19 @@
       g.textBaseline = "alphabetic";
       g.fillStyle = v("--soft");
       g.font = fMono;
-      if (letter.sent) g.fillText(new Date(letter.sent).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }).toUpperCase().split("").join(" "), PAD, PAD);
-      g.fillStyle = v("--accent");
+      g.fillStyle = v("--hue");
       g.font = fTo;
       let toText = letter.to ? "For " + letter.to : "For you";
       while (g.measureText(toText).width > IN - 300 && toText.length > 8) toText = toText.slice(0, -2) + "…";
       g.fillText(toText, PAD, top + 30);
 
-      g.fillStyle = v("--ink");
+      g.fillStyle = v("--pen");
       g.font = fBody;
       let y = top + 96 + LH * 0.5;
       for (const l of lines) { g.fillText(l, PAD, y); y += LH; }
 
       if (letter.from) {
-        g.fillStyle = v("--accent");
+        g.fillStyle = v("--hue");
         g.font = fFrom;
         g.textAlign = "right";
         g.fillText("— " + letter.from, W - PAD, y + 40);
@@ -476,13 +433,14 @@
       } else if (prev.flower !== letter.flower || prev.look !== letter.look) {
         scene.setWorld(letter.flower);
         scene.setLook(letter.look);
+        scene.setWrap(letter.paper);
         scene.restart();
-      }
+      } else if (prev.paper !== letter.paper) scene.setWrap(letter.paper);
       typed = true; // in the preview the words are simply there
       fillPaper();
       if (sheetOpen) typeBody(true);
       if (e.data.show === "letter") { envelope.classList.add("open"); openSheet(true); }
-      else if (sheetOpen) { closeSheet(); envelope.classList.remove("open"); $("envLabel").textContent = "tap to open your letter"; }
+      else if (sheetOpen) { closeSheet(); envelope.classList.remove("open"); envLabel.textContent = "tap to open your letter"; }
     });
     if (window.parent !== window) window.parent.postMessage({ type: "tenderly-preview-ready" }, FROM_FOLDER ? "*" : location.origin);
   }

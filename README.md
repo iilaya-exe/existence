@@ -2,25 +2,26 @@
 
 *Letters that bloom.* Write someone a letter; it opens for them inside a bouquet.
 
-They get a link. It opens on their name under falling stars. One tap starts the music and a
-bouquet grows out of the dark. An envelope with your initial on its wax seal waits beneath the
-flowers, and inside it is your letter on paper, written out line by line, with your photos and
-your voice.
+They get a link. It opens on their name, in a quiet sunlit room. One tap starts the music and a
+bouquet grows, wrapped in paper and tied with a ribbon bow, the way flowers are handed to
+someone. An envelope with your initial on its wax seal rests on the table beside it, and inside is your letter on paper, written out line by line, with
+your photos and your voice. It is one-way: the page they open has nothing for writing back.
 
 Tenderly combines two earlier projects:
 
 | From **Lindbloom** (the letter) | From **Rebloom** (the moment) |
 | --- | --- |
-| Long letters, paper styles, photos with captions, a voice note | The bouquet that grows and sways on a night sky, with music |
-| The letter lives in the link, not on a server | The opening screen: their name, falling stars, "tap to open" |
+| Long letters, paper styles, photos with captions, a voice note | A bouquet that grows and sways, with music |
+| The letter lives in the link, not on a server | The opening screen: their name and "tap to open" |
 | Envelope and wax seal, save the letter as an image | Link previews in chat apps, heart-shaped QR codes |
 | | A live preview of the real page while you write |
 | | Automatic step-down on slow phones, a no-WebGL fallback |
 
-New here: **peonies** and a new **painted lily** (both painted from scratch, replacing
-Lindbloom's flowers), arranged alone or together in one bouquet; a painted look as well as
-Rebloom's embroidered text-character look; encrypted short links, drafts that save
-themselves, a "Write back" button, and a keepsake file.
+New here: its own look (a daylit room and a paper-wrapped bouquet instead of Rebloom's night
+sky; the wrap takes the colour of the letter paper you choose);
+**peonies** and a new **painted lily**, both painted from scratch, arranged alone or together;
+a painted look as well as an embroidered one, stitched from tiny characters; encrypted short
+links; drafts that save themselves; and a keepsake file.
 
 ## Privacy
 
@@ -38,6 +39,8 @@ themselves, a "Write back" button, and a keepsake file.
    `KV_REST_API_URL` and `KV_REST_API_TOKEN` variables by itself. Redeploy.
 
 Without step 2 everything still works; links are simply long, because they hold the letter.
+A QR code can only hold so much, so without short links only shorter letters with nothing
+tucked in fit in one. With short links every letter does.
 A stored letter is at most about 3 MB (four photos and a one-minute voice note fit easily).
 
 ## Run it locally
@@ -66,12 +69,12 @@ No framework, no bundler, no dependencies to install.
 | `index.html`, `js/compose.js`, `css/compose.css` | The composer: form, live preview, drafts, sending |
 | `letter.html`, `js/letter.js`, `css/letter.css` | What the recipient sees |
 | `js/codec.js` | Packing, compressing and encrypting a letter into a link (shared with the tests) |
-| `js/scene.js` | Draws a bouquet on the night sky, embroidered or painted |
+| `js/scene.js` | Draws the room and the wrapped bouquet, painted or embroidered |
 | `js/world-mixed.js`, `js/world-peonies.js` | The painted bouquets: lilies with peony accents, and peonies alone |
 | `js/world-lilies.js` | Rebloom's original 3D lily bouquet |
 | `js/bouquet.js` | Builds a painted bouquet from a list of flowers, buds and leaves |
 | `js/peony.js`, `js/lily.js` | The flower painters (the peony also makes the sprig on the paper) |
-| `js/kit.js` | Shared maths, wind, stems and leaves |
+| `js/kit.js` | Shared maths, wind, stems, leaves, and the paper wrap and bow |
 | `api/l.js` | Serves the letter page with link-preview tags |
 | `api/letters.js` | Stores and returns encrypted short-link letters |
 | `scripts/dev.js` | Local server that stands in for Vercel |
@@ -80,8 +83,8 @@ Routes: `/` composer · `/l#…` long link · `/s/<id>#k=…` short link · `/ap
 
 ## Credits
 
-- The lily bouquet, the text-character renderer, the falling stars and the heart QR code come
-  from Rebloom. The music (`audio/bloom.mp3`) is also Rebloom's track; if you publish this for
+- The 3D lily bouquet ("Classic lilies"), the idea of drawing flowers in text characters and the
+  heart QR code come from Rebloom. The music (`audio/bloom.mp3`) is also Rebloom's track; if you publish this for
   others to use, make sure you have the right to use that recording, or replace the file.
 - QR codes use [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) by
   Kazuhiko Arase (MIT).

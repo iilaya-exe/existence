@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#f6eee4">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <!--META-->
@@ -16,7 +16,7 @@
 </head>
 <body>
 
-<!-- the night sky and the bouquet -->
+<!-- the room: wall, table, and the wrapped bouquet -->
 <div id="stage" class="stage"></div>
 
 <!-- words above the bouquet -->
@@ -25,9 +25,8 @@
   <div class="hello-from" id="helloFrom"></div>
 </div>
 
-<!-- opening screen: their name, falling stars. The tap also lets the music start. -->
+<!-- opening screen: their name in the empty room. The tap also lets the music start. -->
 <button id="gate" class="gate" type="button" hidden aria-label="Open your letter">
-  <canvas class="rain" id="gateRain" aria-hidden="true"></canvas>
   <span class="gate-name" id="gateName">for you</span>
   <span class="gate-hint">tap to open</span>
 </button>
@@ -37,11 +36,10 @@
   <div class="panel-in">
     <h1 class="panel-title" id="brokenTitle">This letter lost its way.</h1>
     <p class="panel-note" id="brokenNote">The link may be incomplete. Ask whoever sent it to copy it again.</p>
-    <a class="panel-link" id="brokenHome" href="./">Write a letter</a>
   </div>
 </section>
 
-<!-- the envelope that rests under the bouquet once it has bloomed -->
+<!-- the envelope that rests on the table beside the bouquet once the flowers have opened -->
 <button id="envelope" class="envelope" type="button" hidden aria-label="Open your letter">
   <span class="env-body">
     <span class="env-back"></span>
@@ -50,14 +48,13 @@
     <span class="env-flap"></span>
     <span class="env-seal" id="envSeal"></span>
   </span>
-  <span class="env-label" id="envLabel">tap to open your letter</span>
 </button>
+<button id="envLabel" class="env-label" type="button" hidden tabindex="-1" aria-hidden="true">tap to open your letter</button>
 
 <!-- the letter -->
 <div id="sheet" class="sheet" hidden>
   <article class="paper" id="paper" tabindex="-1">
     <img class="sprig" id="sprig" alt="" aria-hidden="true">
-    <p class="p-date" id="pDate"></p>
     <h1 class="p-to" id="pTo"></h1>
     <div class="p-body" id="pBody"></div>
     <p class="p-from" id="pFrom"></p>
@@ -81,9 +78,8 @@
   <div class="actions" id="actions">
     <button type="button" id="backBtn">Back to the flowers</button>
     <button type="button" id="saveBtn">Save as image</button>
-    <a id="replyBtn" href="./">Write back</a>
   </div>
-  <p class="made"><a id="madeLink" href="./">Tenderly</a> · letters that bloom</p>
+  <p class="made">Tenderly · letters that bloom</p>
 </div>
 
 <button id="snd" class="snd" type="button" data-state="blocked" aria-label="Turn sound on" hidden>

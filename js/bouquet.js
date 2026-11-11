@@ -1,6 +1,6 @@
 // Builds a painted bouquet world from a list of flowers, buds and leaves. Peonies and the
-// painted lilies share it, so they can be arranged alone or together. Every bouquet grows,
-// opens and sways on the same timeline and in the same frame as Rebloom's lily bouquet, so
+// painted lilies share it, so they can be arranged alone or together. Every bouquet is tied in
+// the same paper wrap and grows, opens and sways on the same timeline as Rebloom's lily bouquet, so
 // the scene engine can show any of them.
 (function (root) {
   "use strict";
@@ -11,6 +11,7 @@
   // spec.buds:    [kind, x, y, size, palette]
   // spec.leaves:  [x, y, direction (radians, 0 = right, y down), length]   peony leaves (three leaflets)
   // spec.blades:  [x, y, direction, length, half-width, droop]             lily leaves (long and narrow)
+  // spec.top:     world y where the tallest bud ends (up is negative)
   T.bouquet = function (name, spec) {
     T.worlds[name] = function create() {
       const { clamp, lerp, smooth, easeOut, easeInOut, mulberry } = T.kit;
@@ -20,6 +21,7 @@
       const R = mulberry(spec.seed || 90210);
       const make = { peony: T.peony.make, lily: T.lily.make };
       let punch = 0; // deeper petal shadows for the text-character look
+      let wrapName = "ivory"; // which paper the bouquet is wrapped in
 
       const makeStem = (x, y) => ({ bx: 0, by: 0, cx: 0, cy: 0, x, y, start: R() * 0.15, dur: 0.8 + R() * 0.2, leaves: [] });
       const flowers = spec.flowers.map(([kind, x, y, r, key, tilt, lean, order], i) => {
@@ -93,8 +95,10 @@
       }
 
       function drawWorld(g, t) {
+        T.kit.wrap.back(g, wrapName, easeOut((t - 0.3) / 1.5));
         for (const f of buds) drawStem(g, f.st, t, flutter(f.seed, t));
         for (const f of flowers) drawStem(g, f.st, t, flutter(f.seed, t));
+        T.kit.wrap.front(g, wrapName, easeOut(t / 0.9)); // the stems are gathered inside the wrap
         for (const lf of blades) drawBaseLeaf(g, lf, t);
         for (const lf of leaves) {
           const p = easeOut((t - lf.start) / lf.dur);
@@ -120,9 +124,10 @@
 
       return {
         name, GROW_END, LOOP, FADE,
-        frame: { w: 960, h: 1330, anchor: 545 }, // same frame as the lily bouquet: stems gather 545 units below the middle
+        frame: Object.assign({ top: spec.top || -1220 }, T.kit.STAGE), // top: where the tallest bud ends
         setBottom: garden.setBottom,
-        setLook(look) { punch = look === "ascii" ? 1 : 0; },
+        setLook(look) { punch = look === "ascii" ? 0.5 : 0; },
+        setWrap(name) { wrapName = name; },
         draw: drawWorld,
       };
     };

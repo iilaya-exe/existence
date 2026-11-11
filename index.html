@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#07060a">
+<meta name="theme-color" content="#f6eee4">
 <meta name="referrer" content="no-referrer">
 <title>Tenderly · letters that bloom</title>
 <meta name="description" content="Write someone a letter. It opens for them inside a bouquet, with music, photos and your voice.">
@@ -27,7 +27,6 @@
     <p class="eyebrow">letters that bloom</p>
     <h1>Tenderly</h1>
     <p class="lede">Write someone a letter. It opens for them inside a bouquet.</p>
-    <p class="reply-note" id="replyNote" hidden></p>
   </header>
 
   <div class="cols">
@@ -72,7 +71,7 @@
           <div class="choices three" role="radiogroup" aria-label="Flowers">
             <label class="choice"><input type="radio" name="flower" value="mixed" checked><span><b>Lilies &amp; peonies</b><i>lilies lead, peonies soften</i></span></label>
             <label class="choice"><input type="radio" name="flower" value="peonies"><span><b>Peonies</b><i>soft, full, romantic</i></span></label>
-            <label class="choice"><input type="radio" name="flower" value="lilies"><span><b>Night lilies</b><i>Rebloom's original</i></span></label>
+            <label class="choice"><input type="radio" name="flower" value="lilies"><span><b>Classic lilies</b><i>Rebloom's original</i></span></label>
           </div>
           <div class="choices two" role="radiogroup" aria-label="Style">
             <label class="choice"><input type="radio" name="look" value="painted" checked><span><b>Painted</b><i>smooth petals</i></span></label>
@@ -142,13 +141,15 @@
           <button type="button" class="btn ghost" id="keep">Download keepsake file</button>
         </div>
         <div class="qrbox" id="qrbox" hidden>
-          <canvas id="qr" width="1000" height="1000" role="img" aria-label="Heart-shaped QR code that opens the letter"></canvas>
-          <div class="btnrow">
-            <button type="button" class="btn primary" id="qrsave">Save QR</button>
-            <button type="button" class="btn" id="qrshare" hidden>Share QR</button>
+          <div class="qrdraw" id="qrdraw">
+            <canvas id="qr" width="1000" height="1000" role="img" aria-label="Heart-shaped QR code that opens the letter"></canvas>
+            <div class="btnrow">
+              <button type="button" class="btn primary" id="qrsave">Save QR</button>
+              <button type="button" class="btn" id="qrshare" hidden>Share QR</button>
+            </div>
           </div>
           <button type="button" class="linkish" id="qrstyle">Not scanning? Use a plain QR</button>
-          <p class="tip center">Print it and tuck it into a card or a gift.</p>
+          <p class="tip center" id="qrtip">Print it and tuck it into a card or a gift.</p>
         </div>
         <p class="tip" id="keepTip">The keepsake is one file that holds the whole letter, flowers and music. It opens in any browser, forever, even offline.</p>
         <button type="button" class="linkish" id="again">Write another letter</button>

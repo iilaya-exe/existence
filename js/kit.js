@@ -163,5 +163,161 @@
     };
   }
 
-  T.kit = { TAU, clamp, lerp, smooth, easeOut, easeInOut, mulberry, add, mul, dot, cross, norm, mix3, LIGHT, mixHex, hexA, stemPoint, stemAngle, createGarden };
+  // The wrap the bouquet is tied in: sheets of paper gathered at a binding point and held with a
+  // ribbon bow, like flowers handed to someone. Drawn in two parts so the flowers sit inside it:
+  // the back sheets first, then (after the stems) the front sheet, the cut stem ends and the bow.
+  // World units: the stems gather at (0,0); the bow is tied at TIE, the stem ends rest on the table.
+  const TIE = 176, TABLE = 306;
+  // paper: the sheet   shade: its darker side   line: edges and creases   ribbon / knot: the bow
+  const WRAPS = {
+    ivory:    { paper: "#fdf6e6", shade: "#e6d6b8", line: "#b49c72", back: "#f3e6cc", ribbon: "#dd8fa4", knot: "#b25f7a" },
+    blush:    { paper: "#fbdde3", shade: "#eab4c2", line: "#c07f93", back: "#f4c9d3", ribbon: "#b5476b", knot: "#86294a" },
+    kraft:    { paper: "#d6b68a", shade: "#b59164", line: "#806038", back: "#c4a172", ribbon: "#fbf3e2", knot: "#cdbd9c" },
+    midnight: { paper: "#2c3966", shade: "#1a2444", line: "#0c1430", back: "#222d54", ribbon: "#e6bd62", knot: "#ac8530" },
+  };
+  function sheet(g, pts) { // a sheet of paper as straight-edged folds
+    g.beginPath();
+    pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+    g.closePath();
+  }
+  // grow a part out of the binding point as the bouquet arrives (k: 0 = not there yet, 1 = full size)
+  function fromTie(g, k) { g.translate(0, TIE); g.scale(0.25 + 0.75 * k, k); g.translate(0, -TIE); g.globalAlpha = Math.min(1, k * 2.2); }
+  const wrap = {
+    // the sheets behind the flowers: their pleated corners show at the sides and between the blooms
+    back(g, name, k) {
+      if (k <= 0) return;
+      const w = WRAPS[name] || WRAPS.ivory;
+      g.save();
+      fromTie(g, k);
+      g.lineJoin = "round";
+      sheet(g, [[-34, TIE], [-330, -150], [-474, -392], [-388, -470], [-420, -640], [-250, -610], [-150, -760], [0, -640], [150, -760], [250, -610], [420, -640], [388, -470], [474, -392], [330, -150], [34, TIE]]);
+      const gr = g.createLinearGradient(-474, 0, 474, 0); // lit from the left
+      gr.addColorStop(0, w.paper);
+      gr.addColorStop(0.5, w.back);
+      gr.addColorStop(1, w.shade);
+      g.fillStyle = gr;
+      g.fill();
+      g.strokeStyle = hexA(w.line, 0.55);
+      g.lineWidth = 3;
+      g.stroke();
+      g.beginPath(); // pleats fanning up from the binding
+      for (const [x, y] of [[-388, -470], [-250, -610], [0, -640], [250, -610], [388, -470]]) { g.moveTo(x * 0.12, TIE - 60); g.lineTo(x, y); }
+      g.strokeStyle = hexA(w.line, 0.22);
+      g.lineWidth = 2.5;
+      g.stroke();
+      g.restore();
+    },
+    // the front sheet folded across the stems, the cut stem ends below it, and the bow
+    front(g, name, k) {
+      if (k <= 0) return;
+      const w = WRAPS[name] || WRAPS.ivory;
+      g.save();
+      fromTie(g, k);
+      g.lineJoin = "round";
+      g.lineCap = "round";
+
+      // cut stem ends, fanning a little below the binding
+      for (let i = 0; i < 9; i++) {
+        const u = i / 8 - 0.5, x0 = u * 58, x1 = u * 108 + (i % 2 ? 7 : -7), th = 9 + (i % 3) * 2.5;
+        g.beginPath();
+        g.moveTo(x0, TIE - 8);
+        g.lineTo(x1, TABLE - 4);
+        g.strokeStyle = "#123a14"; g.lineWidth = th + 4; g.stroke();
+        g.strokeStyle = "#2c7428"; g.lineWidth = th; g.stroke();
+        g.strokeStyle = "rgba(112,176,72,0.7)"; g.lineWidth = th * 0.28;
+        g.beginPath(); g.moveTo(x0 - th * 0.2, TIE - 8); g.lineTo(x1 - th * 0.2, TABLE - 5); g.stroke();
+        g.beginPath(); // the pale cut end
+        g.ellipse(x1, TABLE - 3, th * 0.62, th * 0.26, 0, 0, TAU);
+        g.fillStyle = "#b9d38a";
+        g.fill();
+      }
+
+      // the right fold, then the left fold over it
+      sheet(g, [[-30, TIE + 6], [56, TIE - 2], [338, -176], [176, -112], [0, -6]]);
+      let gr = g.createLinearGradient(0, 0, 338, 0);
+      gr.addColorStop(0, w.back);
+      gr.addColorStop(1, w.shade);
+      g.fillStyle = gr;
+      g.fill();
+      g.strokeStyle = hexA(w.line, 0.6);
+      g.lineWidth = 3;
+      g.stroke();
+      sheet(g, [[-56, TIE - 2], [-338, -176], [-176, -112], [0, -6], [34, TIE + 6]]);
+      gr = g.createLinearGradient(-338, 0, 40, 0);
+      gr.addColorStop(0, w.paper);
+      gr.addColorStop(0.7, w.paper);
+      gr.addColorStop(1, w.back);
+      g.fillStyle = gr;
+      g.fill();
+      g.stroke();
+      g.beginPath(); // soft creases toward the binding
+      g.moveTo(-176, -112); g.lineTo(-22, TIE - 30);
+      g.moveTo(-262, -146); g.lineTo(-40, TIE - 22);
+      g.moveTo(176, -112); g.lineTo(34, TIE - 30);
+      g.moveTo(262, -146); g.lineTo(46, TIE - 22);
+      g.strokeStyle = hexA(w.line, 0.22);
+      g.lineWidth = 2.5;
+      g.stroke();
+
+      // the bow: two tails, the band around the stems, two loops and the knot
+      const tail = (dir) => {
+        g.beginPath();
+        g.moveTo(dir * 6, TIE);
+        g.bezierCurveTo(dir * 40, TIE + 40, dir * 64, TIE + 78, dir * 96, TIE + 118);
+        g.lineTo(dir * 104, TIE + 92);
+        g.lineTo(dir * 126, TIE + 100);
+        g.bezierCurveTo(dir * 92, TIE + 56, dir * 62, TIE + 22, dir * 26, TIE - 8);
+        g.closePath();
+        g.fillStyle = dir < 0 ? w.ribbon : w.knot;
+        g.fill();
+        g.strokeStyle = hexA(w.knot, 0.7);
+        g.lineWidth = 2;
+        g.stroke();
+      };
+      tail(-1); tail(1);
+      g.beginPath(); // the band
+      g.moveTo(-58, TIE - 18);
+      g.quadraticCurveTo(0, TIE - 6, 58, TIE - 18);
+      g.lineTo(54, TIE + 14);
+      g.quadraticCurveTo(0, TIE + 26, -54, TIE + 14);
+      g.closePath();
+      g.fillStyle = w.ribbon;
+      g.fill();
+      g.strokeStyle = hexA(w.knot, 0.7);
+      g.stroke();
+      const loop = (dir) => {
+        g.beginPath();
+        g.moveTo(0, TIE);
+        g.bezierCurveTo(dir * 40, TIE - 78, dir * 142, TIE - 70, dir * 132, TIE - 6);
+        g.bezierCurveTo(dir * 124, TIE + 40, dir * 44, TIE + 30, 0, TIE);
+        g.closePath();
+        const lg = g.createLinearGradient(0, TIE - 60, 0, TIE + 34);
+        lg.addColorStop(0, w.ribbon);
+        lg.addColorStop(1, w.knot);
+        g.fillStyle = lg;
+        g.fill();
+        g.strokeStyle = hexA(w.knot, 0.75);
+        g.stroke();
+        g.beginPath(); // the hollow of the loop
+        g.moveTo(dir * 18, TIE - 2);
+        g.bezierCurveTo(dir * 52, TIE - 40, dir * 104, TIE - 38, dir * 104, TIE - 6);
+        g.bezierCurveTo(dir * 98, TIE + 14, dir * 50, TIE + 12, dir * 18, TIE - 2);
+        g.fillStyle = hexA(w.knot, 0.5);
+        g.fill();
+      };
+      loop(-1); loop(1);
+      g.beginPath(); // the knot
+      g.ellipse(0, TIE, 21, 25, 0, 0, TAU);
+      g.fillStyle = w.ribbon;
+      g.fill();
+      g.strokeStyle = hexA(w.knot, 0.85);
+      g.stroke();
+      g.restore();
+    },
+  };
+  // every bouquet shares one stage: this wide, a table at this height, room below it for the letter;
+  // the stems end inside the wrap
+  const STAGE = { w: 960, bottom: TABLE + 250, table: TABLE, stemDepth: 100 };
+
+  T.kit = { WRAPS, STAGE, wrap, TAU, clamp, lerp, smooth, easeOut, easeInOut, mulberry, add, mul, dot, cross, norm, mix3, LIGHT, mixHex, hexA, stemPoint, stemAngle, createGarden };
 })(typeof window !== "undefined" ? window : globalThis);

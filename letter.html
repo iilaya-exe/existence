@@ -90,7 +90,8 @@
 
   <div class="actions" id="actions">
     <button type="button" id="backBtn">Back to the flowers</button>
-    <button type="button" id="saveBtn">Save as image</button>
+    <button type="button" id="saveBtn">Save the letter</button>
+    <button type="button" id="keepBouquet">Save the bouquet</button>
   </div>
   <p class="made">Tenderly · letters that bloom</p>
 </div>
@@ -103,6 +104,24 @@
   </svg>
   <span class="label">tap for sound</span>
 </button>
+
+<!-- keep the bouquet: shown over the flowers once they have opened -->
+<button id="keepBtn" class="keep-btn" type="button" hidden aria-label="Save the bouquet">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg>
+</button>
+<div class="saver" id="saver" hidden role="dialog" aria-modal="true" aria-labelledby="saverTitle">
+  <div class="saver-card">
+    <h2 id="saverTitle">Keep the bouquet</h2>
+    <p class="saver-sub">Save it to your phone or computer.</p>
+    <div class="saver-options">
+      <button type="button" data-format="png"><b>Picture</b><i>PNG · sharpest</i></button>
+      <button type="button" data-format="jpeg"><b>Picture</b><i>JPEG · smaller file</i></button>
+      <button type="button" data-format="gif"><b>Blooming</b><i>GIF · it grows and opens</i></button>
+    </div>
+    <p class="saver-note" id="saverNote" role="status" aria-live="polite"></p>
+    <button type="button" class="saver-close" id="saverClose">Close</button>
+  </div>
+</div>
 
 <div class="lightbox" id="lightbox" hidden role="dialog" aria-label="Photo"><img id="lightboxImg" alt=""><p id="lightboxCap"></p></div>
 
@@ -117,6 +136,7 @@
 <script src="js/world-peonies.js"></script>
 <script src="js/world-mixed.js"></script>
 <script src="js/scene.js"></script>
+<script src="js/gif.js"></script>
 <script src="js/letter.js"></script>
 </body>
 </html>

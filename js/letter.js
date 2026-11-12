@@ -16,7 +16,7 @@
   // messages are checked by which window sent them instead.
   const FROM_FOLDER = location.protocol === "file:" || location.origin === "null";
 
-  const envelope = $("envelope"), envLabel = $("envLabel");
+  const envelope = $("envelope"), envLabel = $("envLabel"), keepBtn = $("keepBtn");
   let letter = null;
   let scene = null;
 
@@ -116,6 +116,7 @@
     placeEnvelope(scene.metrics());
     scene.onGrown = () => {
       $("hello").classList.add("show");
+      if (!PREVIEW) { show(keepBtn); requestAnimationFrame(() => requestAnimationFrame(() => keepBtn.classList.add("in"))); }
       setTimeout(() => {
         show(envelope); show(envLabel);
         requestAnimationFrame(() => requestAnimationFrame(() => { envelope.classList.add("in"); envLabel.classList.add("in"); }));
@@ -360,7 +361,8 @@
   lightbox.addEventListener("click", () => hide(lightbox));
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (!lightbox.hidden) hide(lightbox);
+    if (!saver.hidden) closeSaver();
+    else if (!lightbox.hidden) hide(lightbox);
     else if (opening) landLetter();
     else if (sheetOpen && !PREVIEW) closeSheet();
   });
@@ -503,9 +505,111 @@
     } catch (e) {
       btn.textContent = "Couldn't save";
     }
-    setTimeout(() => { btn.textContent = "Save as image"; btn.disabled = false; }, 1800);
+    setTimeout(() => { btn.textContent = "Save the letter"; btn.disabled = false; }, 1800);
   }
   $("saveBtn").addEventListener("click", saveImage);
+
+  // ---------- keep the bouquet: a picture (PNG, JPEG) or the bloom as a GIF ----------
+  // The bouquet is drawn again off-screen at a fixed size, in the same room, with their name above.
+  const saver = $("saver"), saverNote = $("saverNote");
+  let saving = false, saverFrom = null;
+  function openSaver() { saverFrom = document.activeElement; saverNote.textContent = ""; show(saver); saver.querySelector("button").focus(); }
+  function closeSaver() { if (saving) return; hide(saver); if (saverFrom && saverFrom.focus) saverFrom.focus(); }
+  keepBtn.addEventListener("click", openSaver);
+  $("keepBouquet").addEventListener("click", openSaver);
+  $("saverClose").addEventListener("click", closeSaver);
+  saver.addEventListener("click", (e) => { if (e.target === saver) closeSaver(); });
+  saver.querySelectorAll("[data-format]").forEach((b) => b.addEventListener("click", () => keepBouquet(b.dataset.format)));
+
+  const nextTick = () => new Promise((r) => setTimeout(r, 0));
+  // An off-screen stage of w x h pixels. draw(t) paints the bouquet at time t, with the room and
+  // the words, onto one canvas and returns it.
+  function bouquetStage(w, h) {
+    const box = document.createElement("div");
+    box.style.cssText = `position:fixed;left:-${w + 4000}px;top:0;width:${w}px;height:${h}px;pointer-events:none`;
+    box.setAttribute("aria-hidden", "true");
+    document.body.appendChild(box);
+    const stage = T.createScene(box, { world: letter.flower, look: letter.look, wrap: letter.paper, reserveTop: 0.17, autoQuality: false, dpr: 1, petals: false, keep: true });
+    const out = document.createElement("canvas");
+    out.width = w; out.height = h;
+    const g = out.getContext("2d");
+    const ink = getComputedStyle(document.body).getPropertyValue("--ink").trim() || "#4b2f3b";
+    return {
+      draw(t) {
+        stage.renderAt(t);
+        const { room, bouquet } = stage.layers();
+        g.globalAlpha = 1;
+        g.drawImage(room, 0, 0, w, h);
+        g.drawImage(bouquet, 0, 0, w, h);
+        g.textAlign = "center";
+        g.textBaseline = "alphabetic";
+        g.fillStyle = ink;
+        g.font = `italic 400 ${Math.round(w * 0.072)}px "Cormorant Garamond", Georgia, serif`;
+        g.fillText(letter.to ? "for " + letter.to : "for you", w / 2, h * 0.082, w * 0.86);
+        g.globalAlpha = 0.62;
+        g.font = `500 ${Math.round(w * 0.021)}px Karla, system-ui, sans-serif`;
+        const spaced = (str) => str.toUpperCase().split("").join("\u200a");
+        g.fillText(spaced(letter.from ? "a letter from " + letter.from : "a letter"), w / 2, h * 0.082 + w * 0.05, w * 0.86);
+        g.globalAlpha = 0.5;
+        g.fillText(spaced("tenderly"), w / 2, h - w * 0.035);
+        g.globalAlpha = 1;
+        return out;
+      },
+      done() { stage.destroy(); box.remove(); },
+    };
+  }
+
+  async function keepBouquet(format) {
+    if (saving) return;
+    saving = true;
+    const buttons = saver.querySelectorAll("button");
+    buttons.forEach((b) => { b.disabled = true; });
+    const name = "bouquet-for-" + ((letter.to || "you").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "you");
+    let stage = null;
+    try {
+      if (document.fonts) await Promise.all([document.fonts.load('italic 400 40px "Cormorant Garamond"'), document.fonts.load("500 20px Karla")]).catch(() => {});
+      if (format === "gif") {
+        // the bloom: an empty room, the wrap arriving, the flowers opening, then a long look
+        const W = 432, H = 540, step = 0.08, end = 3.5;
+        saverNote.textContent = "Making your GIF…";
+        await nextTick();
+        stage = bouquetStage(W, H);
+        const pixels = (t) => stage.draw(t).getContext("2d").getImageData(0, 0, W, H).data;
+        const samples = [0, 1.3, 2.3, end].map((t) => new Uint8ClampedArray(pixels(t)));
+        const enc = T.gif.encoder(W, H, T.gif.palette(samples, 255));
+        const times = [];
+        for (let t = 0; t <= end + 1e-6; t += step) times.push(Math.min(t, end));
+        for (let i = 0; i < times.length; i++) {
+          enc.frame(pixels(times[i]), i === 0 ? 50 : i === times.length - 1 ? 260 : step * 100);
+          saverNote.textContent = "Making your GIF… " + Math.round(((i + 1) / times.length) * 100) + "%";
+          await nextTick();
+        }
+        download(new Blob([enc.finish()], { type: "image/gif" }), name + ".gif");
+      } else {
+        stage = bouquetStage(1080, 1350);
+        const canvas = stage.draw(world().GROW_END + 1.2);
+        const type = format === "jpeg" ? "image/jpeg" : "image/png";
+        const blob = await new Promise((r) => canvas.toBlob(r, type, 0.92));
+        download(blob, name + (format === "jpeg" ? ".jpg" : ".png"));
+      }
+      saverNote.textContent = "Saved.";
+    } catch (e) {
+      saverNote.textContent = "Couldn't save it this time. Try again, or try another format.";
+    }
+    if (stage) stage.done();
+    buttons.forEach((b) => { b.disabled = false; });
+    saving = false;
+  }
+  const world = () => T.worlds[letter.flower]();
+  function download(blob, filename) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
 
   // ================= the composer's live preview =================
   // The create page shows this very page in a frame and posts the letter as it is typed.

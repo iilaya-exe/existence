@@ -6,7 +6,8 @@ They get a link. It opens on their name, in a quiet sunlit room. One tap starts 
 bouquet grows, wrapped in paper and tied with a ribbon bow, the way flowers are handed to
 someone. A wax-sealed envelope rests on the table beside it. Tapped, it lifts, the seal breaks,
 and the letter slides out and unfolds into the page: your words written out line by line, with
-your photos and your voice. It is one-way: the page they open has nothing for writing back.
+your photos and your voice. They can keep the bouquet as a picture (PNG or JPEG) or as a GIF of it blooming, and save the
+letter itself as a picture. It is one-way: the page they open has nothing for writing back.
 
 Tenderly combines two earlier projects:
 
@@ -92,6 +93,7 @@ No framework, no bundler, no dependencies to install.
 | `js/world-mixed.js`, `js/world-peonies.js` | The painted bouquets: lilies with peony accents, and peonies alone |
 | `js/world-lilies.js` | Rebloom's original 3D lily bouquet |
 | `js/bouquet.js` | Builds a painted bouquet from a list of flowers, buds and leaves |
+| `js/gif.js` | A small animated-GIF encoder, for saving the bouquet blooming |
 | `js/peony.js`, `js/lily.js` | The flower painters (the peony also makes the sprig on the paper) |
 | `js/kit.js` | Shared maths, wind, stems, leaves, and the paper wrap and bow |
 | `api/l.js` | Serves the letter page with link-preview tags |

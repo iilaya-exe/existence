@@ -32,7 +32,9 @@
   const NGLYPH = LEVELS.length * VAR;
 
   function createScene(container, opts) {
-    opts = Object.assign({ world: "mixed", look: "painted", wrap: "ivory", reserveTop: 0.13, autoQuality: true, loop: false }, opts || {});
+    // dpr: pixel density (default: the screen's)   petals: drifting petals in the room
+    // keep: keep the drawn frame readable, for saving pictures of it
+    opts = Object.assign({ world: "mixed", look: "painted", wrap: "ivory", reserveTop: 0.13, autoQuality: true, loop: false, dpr: 0, petals: true, keep: false }, opts || {});
     const reduce = !!(root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
     let world = T.worlds[opts.world]();
@@ -100,7 +102,7 @@
     const api = { onGrown: null, onLayout: null, fadeSource: null, reduce };
 
     function layout() {
-      dpr = Math.min(root.devicePixelRatio || 1, 2);
+      dpr = opts.dpr || Math.min(root.devicePixelRatio || 1, 2);
       const cssW = container.clientWidth || root.innerWidth;
       const cssH = container.clientHeight || root.innerHeight;
       W = Math.max(2, Math.round(cssW * dpr));
@@ -195,7 +197,7 @@
         g.fill();
         g.restore();
       }
-      if (reduce) return;
+      if (reduce || !opts.petals) return;
       const time = now / 1000;
       for (const p of petals) {
         const y = ((p.y + time * p.v) % 1.1) * tableY - 0.05 * tableY;
@@ -234,7 +236,7 @@
 
     // ================= embroidered pass: WebGL =================
     function makeGL() {
-      const gl = cv.getContext("webgl", { antialias: false, alpha: true, premultipliedAlpha: true });
+      const gl = cv.getContext("webgl", { antialias: false, alpha: true, premultipliedAlpha: true, preserveDrawingBuffer: !!opts.keep });
       if (!gl) return null;
       const vs = `attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }`;
       const fs = `
@@ -480,7 +482,19 @@
     // where the stage sits on screen, in CSS pixels: x, y = where the stems gather, scale = CSS
     // pixels per world unit, table = the table's edge. For placing things beside the bouquet.
     api.metrics = function () { return { x: ox / dpr, y: oy / dpr, scale: S / dpr, table: tableY / dpr }; };
-    api.destroy = function () { destroyed = true; root.removeEventListener("resize", onResize); if (cv) cv.remove(); room.remove(); };
+    // the two layers as drawn at the last render: the room, and the bouquet over it
+    api.layers = function () { return { room, bouquet: cv }; };
+    api.destroy = function () {
+      destroyed = true;
+      root.removeEventListener("resize", onResize);
+      if (cv) {
+        const gl = look === "ascii" && cv.getContext("webgl");
+        const lose = gl && gl.getExtension("WEBGL_lose_context");
+        if (lose) lose.loseContext(); // hand the graphics memory back straight away
+        cv.remove();
+      }
+      room.remove();
+    };
 
     function onResize() {
       layout();

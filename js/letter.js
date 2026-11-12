@@ -159,8 +159,15 @@
   const SPRIGS = { ivory: ["blush", "rose"], blush: ["cream", "rose"], kraft: ["cream", "coral"], midnight: ["blush", "lilac"] };
   function fillPaper() {
     paper.className = "paper " + letter.paper + (letter.hand === "script" ? " script" : "");
-    $("sprig").src = T.peony.sprig(380, SPRIGS[letter.paper] || SPRIGS.ivory, 7);
-    $("pTo").textContent = letter.to ? "For " + letter.to : "For you";
+    const blooms = SPRIGS[letter.paper] || SPRIGS.ivory;
+    $("sprig").src = T.peony.sprig(380, blooms, 7);
+    $("sprigLow").src = T.peony.sprig(260, [blooms[1]], 19);
+    $("pTo").textContent = letter.to || "you";
+    // the envelope's letter, and the sheet that unfolds from it, are made of this same paper
+    const look = getComputedStyle(paper), page = document.documentElement.style;
+    page.setProperty("--letter-paper", look.getPropertyValue("--paper"));
+    page.setProperty("--letter-paper-edge", look.getPropertyValue("--paper-edge"));
+    page.setProperty("--letter-soft", look.getPropertyValue("--soft"));
     $("pFrom").textContent = letter.from ? "— " + letter.from : "";
     $("pFrom").hidden = !letter.from;
 
@@ -250,14 +257,11 @@
     const vw = window.innerWidth, vh = window.innerHeight;
     const ow = Math.min(300, vw * 0.76), oh = (ow * 2) / 3;
     const cx = vw / 2, bottom = Math.min(vh * 0.62 + oh / 2, vh - 36); // where it is held up
-    const look = getComputedStyle(paper);
     opener.className = "opener";
     opSheet.removeAttribute("style");
     opener.style.setProperty("--ow", ow + "px");
     opener.style.setProperty("--ol", cx - ow / 2 + "px");
     opener.style.setProperty("--ot", bottom - oh + "px");
-    opener.style.setProperty("--op-paper", look.getPropertyValue("--paper"));
-    opener.style.setProperty("--op-paper-edge", look.getPropertyValue("--paper-edge"));
     // begin exactly over the resting envelope, then let go: it travels to the middle
     opener.style.transition = "none";
     opener.style.transform = `translate(${ex - cx}px, ${ey - bottom}px) scale(${ew / ow}) rotate(-5deg)`;
@@ -398,7 +402,7 @@
       const fBody = script ? '400 46px Caveat, cursive' : '400 37px "Cormorant Garamond", Georgia, serif';
       const fTo = script ? '500 72px Caveat, cursive' : 'italic 400 66px "Cormorant Garamond", Georgia, serif';
       const fFrom = script ? '500 54px Caveat, cursive' : 'italic 400 46px "Cormorant Garamond", Georgia, serif';
-      const fMono = '500 19px ui-monospace, Menlo, Consolas, monospace';
+      const fMono = '500 19px Karla, system-ui, sans-serif';
       const fCap = '500 32px Caveat, cursive';
       const LH = script ? 62 : 58;
 
@@ -412,7 +416,7 @@
       const photoH = photoRows ? photoRows * (cell + 78) + (photoRows - 1) * gap + 60 : 0;
 
       const top = PAD + 124; // the words begin below the sprig in the corner
-      const H = Math.ceil(top + 96 + lines.length * LH + (letter.from ? 110 : 30) + photoH + 120);
+      const H = Math.ceil(top + 150 + lines.length * LH + (letter.from ? 110 : 30) + photoH + 210);
       const c = document.createElement("canvas");
       c.width = W; c.height = H;
       const g = c.getContext("2d");
@@ -421,21 +425,40 @@
       g.fillStyle = bg;
       g.fillRect(0, 0, W, H);
 
-      const sprig = await loadImage(T.peony.sprig(520, SPRIGS[letter.paper] || SPRIGS.ivory, 7));
+      // the double frame
+      g.strokeStyle = v("--soft");
+      g.lineWidth = 2;
+      g.globalAlpha = 0.4; g.strokeRect(22, 22, W - 44, H - 44);
+      g.globalAlpha = 0.2; g.strokeRect(31, 31, W - 62, H - 62);
+      g.globalAlpha = 1;
+
+      const blooms = SPRIGS[letter.paper] || SPRIGS.ivory;
+      const sprig = await loadImage(T.peony.sprig(520, blooms, 7));
       if (sprig) g.drawImage(sprig, W - 372, -84, 420, 420);
+      const low = await loadImage(T.peony.sprig(360, [blooms[1]], 19));
+      if (low) { g.save(); g.translate(96, H - 96); g.rotate(-0.42); g.drawImage(low, -130, -130, 260, 260); g.restore(); }
 
       g.textBaseline = "alphabetic";
       g.fillStyle = v("--soft");
       g.font = fMono;
+      g.fillText("A LETTER FOR".split("").join("\u200a"), PAD, top - 44);
       g.fillStyle = v("--hue");
       g.font = fTo;
-      let toText = letter.to ? "For " + letter.to : "For you";
+      let toText = letter.to || "you";
       while (g.measureText(toText).width > IN - 300 && toText.length > 8) toText = toText.slice(0, -2) + "…";
       g.fillText(toText, PAD, top + 30);
+      // the little flower and its line
+      g.save();
+      g.translate(PAD + 13, top + 76);
+      for (let k = 0; k < 5; k++) { g.rotate((Math.PI * 2) / 5); g.beginPath(); g.ellipse(0, -8, 4.6, 8, 0, 0, Math.PI * 2); g.fill(); }
+      g.restore();
+      const line = g.createLinearGradient(PAD + 40, 0, PAD + IN - 260, 0);
+      line.addColorStop(0, v("--hue")); line.addColorStop(1, "rgba(0,0,0,0)");
+      g.globalAlpha = 0.55; g.fillStyle = line; g.fillRect(PAD + 40, top + 75, IN - 300, 2); g.globalAlpha = 1;
 
       g.fillStyle = v("--pen");
       g.font = fBody;
-      let y = top + 96 + LH * 0.5;
+      let y = top + 150 + LH * 0.5;
       for (const l of lines) { g.fillText(l, PAD, y); y += LH; }
 
       if (letter.from) {
@@ -465,7 +488,7 @@
       g.fillStyle = v("--soft");
       g.font = fMono;
       g.textAlign = "center";
-      g.fillText("T E N D E R L Y", W / 2, H - 52);
+      g.fillText("T E N D E R L Y", W / 2, H - 64);
 
       const blob = await new Promise((r) => c.toBlob(r, "image/png"));
       const a = document.createElement("a");

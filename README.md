@@ -4,7 +4,8 @@
 
 They get a link. It opens on their name, in a quiet sunlit room. One tap starts the music and a
 bouquet grows, wrapped in paper and tied with a ribbon bow, the way flowers are handed to
-someone. An envelope with your initial on its wax seal rests on the table beside it, and inside is your letter on paper, written out line by line, with
+someone. A wax-sealed envelope rests on the table beside it. Tapped, it lifts, the seal breaks,
+and the letter slides out and unfolds into the page: your words written out line by line, with
 your photos and your voice. It is one-way: the page they open has nothing for writing back.
 
 Tenderly combines two earlier projects:

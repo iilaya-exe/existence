@@ -46,10 +46,20 @@
     <span class="env-sheet"></span>
     <span class="env-front"></span>
     <span class="env-flap"></span>
-    <span class="env-seal" id="envSeal"></span>
+    <span class="env-seal"></span>
   </span>
 </button>
 <button id="envLabel" class="env-label" type="button" hidden tabindex="-1" aria-hidden="true">tap to open your letter</button>
+
+<!-- the opening: the same envelope lifted off the table, large, in the middle of the screen.
+     Its seal breaks, the flap opens, and the letter slides out and unfolds into the page. -->
+<div id="opener" class="opener" hidden aria-hidden="true">
+  <span class="op-back"></span>
+  <span class="op-sheet" id="opSheet"></span>
+  <span class="op-front"></span>
+  <span class="op-flap"></span>
+  <span class="op-seal"></span>
+</div>
 
 <!-- the letter -->
 <div id="sheet" class="sheet" hidden>

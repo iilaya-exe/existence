@@ -7,6 +7,7 @@
   --accent: #b5476b;
   --chip: rgba(255, 255, 255, 0.66);
   --chip-line: rgba(75, 47, 59, 0.18);
+  --env: #fffaf1; --env-shade: #ecdfc9; --env-in: #dccbb0; --wax: #b02a4c; /* the envelope and its seal */
   --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   --script: "Caveat", "Segoe Script", "Bradley Hand", cursive;
   --body: "Karla", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -76,7 +77,6 @@ button { font: inherit; color: inherit; }
 /* ---------- envelope: on the table, beside the wrapped stems ----------
    --ex / --ey: where its bottom-centre rests, --ew: its width (set from the scene's layout) */
 .envelope {
-  --env: #fffaf1; --env-shade: #ecdfc9; --env-in: #dccbb0; --wax: #b02a4c; --wax-ink: #ffe3e8;
   position: fixed; left: var(--ex, 60%); top: var(--ey, 86%);
   width: var(--ew, 130px);
   padding: 0; border: 0; background: transparent; cursor: pointer;
@@ -87,6 +87,7 @@ button { font: inherit; color: inherit; }
   perspective: 900px;
 }
 .envelope.in { opacity: 1; transform: translate(-50%, -100%) rotate(-5deg); }
+.envelope.gone { visibility: hidden; transition: none; } /* lifted off the table: the opening has taken its place */
 .envelope.away { opacity: 0; pointer-events: none; transform: translate(-50%, -100%) translateY(14px) rotate(-5deg) scale(0.95); transition-duration: 0.6s; }
 .envelope:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 8px; }
 .env-body { position: relative; display: block; width: 100%; aspect-ratio: 3 / 2; filter: drop-shadow(0 10px 12px rgba(96, 62, 46, 0.3)); transform-style: preserve-3d; }
@@ -95,15 +96,14 @@ button { font: inherit; color: inherit; }
 .env-sheet { left: 8%; right: 8%; top: 10%; bottom: 8%; border-radius: 3px; background: linear-gradient(180deg, #ffffff, #f6eee0); transition: transform 0.9s cubic-bezier(0.3, 0.7, 0.2, 1) 0.45s; }
 .env-front { inset: 0; border-radius: 6px; background: linear-gradient(170deg, var(--env), var(--env-shade)); clip-path: polygon(0 0, 50% 56%, 100% 0, 100% 100%, 0 100%); }
 .env-flap { left: 0; right: 0; top: 0; height: 62%; background: linear-gradient(180deg, var(--env), var(--env-shade)); clip-path: polygon(0 0, 100% 0, 50% 100%); transform-origin: 50% 0; transition: transform 0.7s ease 0.15s, filter 0.7s ease 0.15s; filter: drop-shadow(0 2px 2px rgba(96, 62, 46, 0.28)); backface-visibility: visible; }
-.env-seal {
+.env-seal, .op-seal { /* plain pressed wax: a dome with a ring stamped into it */
   left: 50%; top: 58%; width: 27%; aspect-ratio: 1; transform: translate(-50%, -50%);
-  display: grid !important; place-items: center;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #de5d7a, var(--wax) 55%, #7a1430);
+  background: radial-gradient(circle at 35% 30%, #e0607d, var(--wax) 55%, #7a1430);
   box-shadow: 0 2px 4px rgba(70, 20, 30, 0.4), inset 0 0 0 2px rgba(255, 255, 255, 0.1), inset 0 -3px 5px rgba(0, 0, 0, 0.25);
-  color: var(--wax-ink); font: italic 500 calc(var(--ew, 130px) * 0.14)/1 var(--serif);
   transition: transform 0.45s ease, opacity 0.45s ease;
 }
+.env-seal::after, .op-seal::after { content: ""; position: absolute; inset: 21%; border-radius: 50%; box-shadow: inset 0 1.5px 2px rgba(60, 8, 24, 0.5), 0 1px 0 rgba(255, 255, 255, 0.22); }
 .envelope.open .env-seal { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
 .envelope.open .env-flap { transform: rotateX(178deg); filter: brightness(0.92); }
 .envelope.open .env-sheet { transform: translateY(-46%); }
@@ -115,6 +115,23 @@ button { font: inherit; color: inherit; }
 }
 .env-label.in { opacity: 1; animation: breathe 2.8s ease-in-out 1.4s infinite; }
 
+/* ---------- the opening ----------
+   --ol / --ot / --ow: where the lifted envelope sits and how wide it is (set when it is tapped) */
+.opener { position: fixed; z-index: 7; left: var(--ol); top: var(--ot); width: var(--ow); aspect-ratio: 3 / 2; transform-origin: 50% 100%; transition: transform 0.55s cubic-bezier(0.3, 0.8, 0.3, 1); pointer-events: none; perspective: 1100px; }
+.opener > span { position: absolute; display: block; }
+.op-back { inset: 0; z-index: 1; border-radius: 8px; background: linear-gradient(180deg, var(--env-in), var(--env-shade)); box-shadow: 0 22px 44px rgba(96, 62, 46, 0.32); }
+.op-sheet { left: 7%; right: 7%; top: 8%; height: 84%; z-index: 3; border-radius: 4px; background: linear-gradient(180deg, var(--op-paper, #fffbf3), var(--op-paper-edge, #f6ecd9)); box-shadow: 0 2px 7px rgba(96, 60, 50, 0.2); transition: transform 0.7s cubic-bezier(0.3, 0.7, 0.2, 1); }
+.op-front { inset: 0; z-index: 4; border-radius: 8px; background: linear-gradient(170deg, var(--env), var(--env-shade)); clip-path: polygon(0 0, 50% 56%, 100% 0, 100% 100%, 0 100%); }
+.op-flap { left: 0; right: 0; top: 0; height: 62%; z-index: 5; background: linear-gradient(180deg, var(--env), var(--env-shade)); clip-path: polygon(0 0, 100% 0, 50% 100%); transform-origin: 50% 0; transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1); filter: drop-shadow(0 2px 2px rgba(96, 62, 46, 0.28)); }
+.op-seal { z-index: 6; width: 24%; transition: transform 0.32s ease, opacity 0.32s ease; }
+.opener.unsealed .op-seal { transform: translate(-50%, -50%) scale(1.4); opacity: 0; } /* the seal breaks */
+.opener.unsealed .op-flap { transform: rotateX(180deg); }                              /* the flap lifts */
+.opener.flap-up .op-flap { z-index: 2; background: linear-gradient(0deg, var(--env-in), var(--env-shade)); filter: none; } /* now standing behind the letter, showing its inside */
+.opener.risen .op-sheet { transform: translateY(-106%); }                              /* the letter slides out */
+.opener.unfold .op-sheet { z-index: 7; transition: left 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.8s ease, opacity 0.35s ease; box-shadow: 0 26px 60px rgba(96, 60, 50, 0.26), 0 2px 8px rgba(96, 60, 50, 0.1); } /* and unfolds into the page */
+.opener.unfold .op-back, .opener.unfold .op-front { transform: translateY(54px); opacity: 0; transition: transform 0.6s ease, opacity 0.5s ease; } /* the envelope falls away */
+.opener.unfold .op-flap { opacity: 0; transition: opacity 0.35s ease; }
+
 /* ---------- the letter ---------- */
 .sheet {
   position: fixed; inset: 0; z-index: 5;
@@ -123,7 +140,7 @@ button { font: inherit; color: inherit; }
   background: rgba(246, 238, 228, 0);
   transition: background 0.8s ease;
 }
-.sheet.in { background: rgba(246, 238, 228, 0.86); }
+.sheet.in, .sheet.veil { background: rgba(246, 238, 228, 0.86); }
 .paper {
   --paper: #fffbf3; --paper-edge: #f6ecd9; --pen: #3d3427; --soft: #8a7a62; --hue: #a8405c; --rule: rgba(120, 96, 60, 0.16);
   position: relative;
@@ -141,13 +158,17 @@ button { font: inherit; color: inherit; }
   outline: none;
 }
 .sheet.in .paper { transform: none; opacity: 1; }
+/* during the opening the page lies in place, unseen, so the letter knows where to unfold to */
+.sheet.staged .paper { transform: none; opacity: 0; transition: none; }
+.sheet.staged.in .paper { opacity: 1; }
+.sheet.staged:not(.in) .made { opacity: 0; }
 .paper.blush { --paper: #fdeef0; --paper-edge: #f6d9de; --pen: #4a2f36; --soft: #9a6f7a; --hue: #b23a5e; --rule: rgba(150, 80, 100, 0.16); }
 .paper.kraft { --paper: #dcc6a0; --paper-edge: #c9ae82; --pen: #3a2a18; --soft: #6e5636; --hue: #7c2f2a; --rule: rgba(70, 45, 15, 0.2); }
 .paper.midnight { --paper: #18203c; --paper-edge: #0f1529; --pen: #ecdcb0; --soft: #a99c78; --hue: #f0c36a; --rule: rgba(236, 220, 176, 0.18); color-scheme: dark; }
 .paper.midnight { background: radial-gradient(120% 90% at 0% 0%, rgba(120, 140, 220, 0.14), transparent 60%), linear-gradient(180deg, var(--paper), var(--paper-edge)); }
 
-.sprig { position: absolute; top: -34px; right: -22px; width: clamp(120px, 34vw, 176px); height: auto; pointer-events: none; filter: drop-shadow(0 6px 9px rgba(96, 60, 50, 0.24)); transform: rotate(8deg); }
-.p-to { margin: clamp(12px, 3.6vw, 24px) 0 clamp(24px, 6.4vw, 36px); font: italic 400 clamp(28px, 7.4vw, 38px)/1.1 var(--serif); color: var(--hue); overflow-wrap: anywhere; max-width: calc(100% - 70px); }
+.sprig { position: absolute; top: -52px; right: -28px; width: clamp(140px, 38vw, 204px); height: auto; pointer-events: none; filter: drop-shadow(0 6px 9px rgba(96, 60, 50, 0.24)); transform: rotate(8deg); }
+.p-to { margin: clamp(12px, 3.6vw, 24px) 0 clamp(24px, 6.4vw, 36px); font: italic 400 clamp(28px, 7.4vw, 38px)/1.1 var(--serif); color: var(--hue); overflow-wrap: anywhere; max-width: calc(100% - 112px); }
 .p-body { font: 400 clamp(18px, 4.7vw, 21px)/1.62 var(--serif); white-space: pre-wrap; overflow-wrap: anywhere; min-height: 3em; }
 .paper.script .p-body { font: 400 clamp(22px, 5.8vw, 26px)/1.42 var(--script); }
 .paper.script .p-to { font: 500 clamp(32px, 8.4vw, 42px)/1.05 var(--script); }
@@ -194,7 +215,7 @@ button { font: inherit; color: inherit; }
 }
 .actions button:hover { background: #fff; }
 .actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.made { margin: 26px 0 0; text-align: center; color: rgba(75, 47, 59, 0.42); font-size: 10.5px; }
+.made { margin: 26px 0 0; text-align: center; color: rgba(75, 47, 59, 0.42); font-size: 10.5px; transition: opacity 0.6s ease; }
 
 /* ---------- sound ---------- */
 .snd {
@@ -227,5 +248,5 @@ body.preview .sheet { padding-top: 34px; }
 
 @media (prefers-reduced-motion: reduce) {
   .gate-hint, .env-label.in, .p-body .caret { animation: none; }
-  .hello, .envelope, .env-label, .paper, .sheet, .env-flap, .env-sheet, .env-seal, .actions, .p-from, .voice, .photos { transition-duration: 0.01s; transition-delay: 0s; }
+  .opener, .opener > span, .hello, .envelope, .env-label, .paper, .sheet, .env-flap, .env-sheet, .env-seal, .actions, .p-from, .voice, .photos { transition-duration: 0.01s; transition-delay: 0s; }
 }

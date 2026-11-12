@@ -135,7 +135,6 @@
     $("gateName").textContent = letter.to || "for you";
     $("helloTo").textContent = letter.to ? "for " + letter.to : "for you";
     $("helloFrom").textContent = letter.from ? "a letter from " + letter.from : "a letter";
-    $("envSeal").textContent = letter.from ? Array.from(letter.from)[0].toUpperCase() : "♥";
     if (!PREVIEW) document.title = letter.to ? "For " + letter.to : "A letter for you";
   }
 
@@ -238,10 +237,79 @@
     envLabel.classList.add("in");
     setTimeout(() => { if (!sheetOpen) hide(sheet); }, reduce ? 0 : 700);
   }
+  // ---------- the opening ----------
+  // The first time, the envelope is lifted off the table into the middle of the screen, its seal
+  // breaks, the flap opens, and the letter slides out and unfolds into the page. Each step is a
+  // CSS transition; this only sets them going in order. A tap during it skips to the open letter.
+  const opener = $("opener"), opSheet = $("opSheet");
+  let opening = null; // the timers of an opening in progress
+  function openEnvelope() {
+    if (opening || sheetOpen) return;
+    const px = (name) => parseFloat(envelope.style.getPropertyValue(name)) || 0;
+    const ew = px("--ew"), ex = px("--ex"), ey = px("--ey"); // where the envelope rests on the table
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const ow = Math.min(300, vw * 0.76), oh = (ow * 2) / 3;
+    const cx = vw / 2, bottom = Math.min(vh * 0.62 + oh / 2, vh - 36); // where it is held up
+    const look = getComputedStyle(paper);
+    opener.className = "opener";
+    opSheet.removeAttribute("style");
+    opener.style.setProperty("--ow", ow + "px");
+    opener.style.setProperty("--ol", cx - ow / 2 + "px");
+    opener.style.setProperty("--ot", bottom - oh + "px");
+    opener.style.setProperty("--op-paper", look.getPropertyValue("--paper"));
+    opener.style.setProperty("--op-paper-edge", look.getPropertyValue("--paper-edge"));
+    // begin exactly over the resting envelope, then let go: it travels to the middle
+    opener.style.transition = "none";
+    opener.style.transform = `translate(${ex - cx}px, ${ey - bottom}px) scale(${ew / ow}) rotate(-5deg)`;
+    show(opener);
+    envelope.classList.add("gone");
+    envLabel.classList.remove("in");
+    $("hello").classList.add("dim");
+    sheet.classList.add("staged", "veil");
+    show(sheet);
+    sheet.scrollTop = 0;
+    void opener.offsetWidth; // take the starting position before the transition is switched back on
+    opener.style.transition = "";
+    opener.style.transform = "none";
+
+    opening = [];
+    const at = (ms, fn) => opening.push(setTimeout(fn, ms));
+    at(520, () => opener.classList.add("unsealed"));
+    at(1080, () => opener.classList.add("flap-up", "risen"));
+    at(1800, () => { // unfold: from where the little sheet is now to where the page lies
+      const o = opener.getBoundingClientRect(), from = opSheet.getBoundingClientRect(), to = paper.getBoundingClientRect();
+      const put = (r) => Object.assign(opSheet.style, { left: r.left - o.left + "px", top: r.top - o.top + "px", width: r.width + "px", height: r.height + "px", right: "auto" });
+      opSheet.style.transition = "none";
+      opSheet.style.transform = "none";
+      put(from);
+      void opSheet.offsetWidth;
+      opSheet.style.transition = "";
+      opener.classList.add("unfold");
+      put(to);
+    });
+    at(2620, landLetter);
+  }
+  // the page itself takes over from the unfolded sheet, and the words begin
+  function landLetter() {
+    if (!opening) return;
+    opening.forEach(clearTimeout);
+    opening = null;
+    sheetOpen = true;
+    sheet.classList.add("in"); // staged: the page appears at once, already in place
+    envelope.classList.remove("gone");
+    envelope.classList.add("open", "away");
+    if (opener.classList.contains("unfold")) opSheet.style.opacity = "0"; // the stand-in sheet fades off the page
+    else hide(opener); // skipped before the letter was out: the envelope just goes
+    setTimeout(() => { hide(opener); sheet.classList.remove("staged", "veil"); }, 380);
+    setTimeout(() => typeBody(false), 160);
+    paper.focus({ preventScroll: true });
+  }
+  sheet.addEventListener("click", () => { if (opening) landLetter(); });
+
   envelope.addEventListener("click", () => {
-    if (envelope.classList.contains("open")) { openSheet(); return; }
-    envelope.classList.add("open");
-    setTimeout(openSheet, reduce ? 0 : 1350);
+    if (envelope.classList.contains("open")) openSheet();      // read again: the page simply returns
+    else if (reduce) { envelope.classList.add("open"); openSheet(); }
+    else openEnvelope();
   });
   envLabel.addEventListener("click", () => envelope.click());
   $("backBtn").addEventListener("click", closeSheet);
@@ -289,6 +357,7 @@
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (!lightbox.hidden) hide(lightbox);
+    else if (opening) landLetter();
     else if (sheetOpen && !PREVIEW) closeSheet();
   });
 
@@ -342,7 +411,7 @@
       const photoRows = Math.ceil(photos.length / cols);
       const photoH = photoRows ? photoRows * (cell + 78) + (photoRows - 1) * gap + 60 : 0;
 
-      const top = PAD + 62; // the words begin below the sprig in the corner
+      const top = PAD + 124; // the words begin below the sprig in the corner
       const H = Math.ceil(top + 96 + lines.length * LH + (letter.from ? 110 : 30) + photoH + 120);
       const c = document.createElement("canvas");
       c.width = W; c.height = H;
@@ -353,7 +422,7 @@
       g.fillRect(0, 0, W, H);
 
       const sprig = await loadImage(T.peony.sprig(520, SPRIGS[letter.paper] || SPRIGS.ivory, 7));
-      if (sprig) g.drawImage(sprig, W - 300, -56, 330, 330);
+      if (sprig) g.drawImage(sprig, W - 372, -84, 420, 420);
 
       g.textBaseline = "alphabetic";
       g.fillStyle = v("--soft");

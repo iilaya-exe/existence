@@ -245,7 +245,9 @@
     const c = document.createElement("canvas");
     c.width = c.height = size;
     const g = c.getContext("2d");
-    const u = size / 400;
+    // The leaves reach well past the flowers, so the spray is drawn smaller than the canvas:
+    // nothing may touch its edges, or it would be cut off there.
+    const u = (size / 400) * (o.leaves ? 0.78 : 1);
     g.translate(size / 2, size / 2);
     g.scale(u, u);
     const rnd = mulberry(seed);
@@ -259,7 +261,15 @@
         g.restore();
       }
     }
-    const spots = palKeys.length > 1 ? [[42, 34, 86, 0.25, 0.3], [-48, -30, 104, 0.15, -0.2], [78, -78, 34, 0.5, 0.6]] : [[0, 0, 128, 0.12, 0]];
+    const spots = palKeys.length > 1 ? [[42, 34, 86, 0.25, 0.3], [-48, -30, 104, 0.15, -0.2], [92, -92, 40, 0.5, 0.6]] : [[0, 0, 128, 0.12, 0]];
+    if (spots.length > 2) { // the little bud's stalk, so it belongs to the spray instead of floating beside it
+      g.beginPath();
+      g.moveTo(34, -6);
+      g.quadraticCurveTo(84, -30, 92, -86);
+      g.lineCap = "round";
+      g.strokeStyle = "#1c4d24"; g.lineWidth = 7; g.stroke();
+      g.strokeStyle = "#3f8a48"; g.lineWidth = 3.5; g.stroke();
+    }
     spots.forEach(([x, y, R, tilt, lean], i) => {
       const key = palKeys[i % palKeys.length];
       const f = makePeony(key, seed + i * 31, { tilt, lean });

@@ -16,9 +16,34 @@
   // What the site can do here. "short": encrypted short links (Vercel + storage).
   // "long": the server is there but has no storage. "static": plain file hosting, no server at all.
   let mode = "static";
+  let whyLong = FROM_FOLDER ? "folder" : "no_server"; // why short links aren't being made, when they aren't
+  let otherDb = "";
   const ready = (FROM_FOLDER ? Promise.resolve(null) : fetch("api/letters", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)))
-    .then((j) => { if (j && typeof j.ok === "boolean") mode = j.ok ? "short" : "long"; })
+    .then((j) => {
+      if (!j || typeof j.ok !== "boolean") return;
+      mode = j.ok ? "short" : "long";
+      whyLong = j.ok ? "" : j.reason || "storage_error";
+      otherDb = j.other || "";
+    })
     .catch(() => {});
+
+  // Why a letter went out as a long link instead of a short one, in words the sender can act on.
+  // (A long link holds the whole letter, so once there are photos it is too big for a QR code.)
+  function whyNoShortLink(reason) {
+    const fix = "In Vercel, open this project's Storage tab, connect Upstash for Redis (or any Redis database) to it, then redeploy: a newly connected database only reaches deployments made after it.";
+    return {
+      folder: "Short links need the site to be online. Opened from a folder, letters travel inside their links.",
+      no_server: "Short links need the site to be online on Vercel. Here, letters travel inside their links.",
+      no_storage: "Short links are off: this site can't see a database. " + fix,
+      unsupported: "Short links are off: this site is connected to " + (otherDb || "a database") + ", but Tenderly keeps letters in Redis. " + fix,
+      auth: "Short links are off: the database turned the site away (its password or token doesn't match, or it's a read-only token). Reconnect the database to this project in Vercel's Storage tab, then redeploy.",
+      readonly: "Short links are off: the site only has read-only access to its database. Reconnect it in Vercel's Storage tab with full access, then redeploy.",
+      unreachable: "Short links are off for now: the site couldn't reach its database. Check that it's still running in Vercel's Storage tab, then try again.",
+      too_large: "This letter was too big to store as a short link. Try fewer photos or a shorter voice note.",
+      slow_down: "Too many letters were sent from here in the last hour, so this one went out as a long link. Try again later for a short one.",
+      storage_error: "The database had trouble storing this letter, so it went out as a long link. Try sealing it again in a moment.",
+    }[reason] || "Short links aren't available right now, so this letter travels inside its link.";
+  }
 
   let photos = []; // [{ src, cap }]
   let voice = null; // data URL
@@ -229,16 +254,18 @@
     try {
       await ready;
       const fragment = await codec.toFragment(letter);
-      let link = "", kind = "long";
+      let link = "", kind = "long", why = whyLong;
       if (mode === "short") {
         try {
           const { key, record } = await codec.lockForServer(letter);
           const r = await fetch("api/letters", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(record) });
-          if (r.ok) { link = location.origin + "/s/" + (await r.json()).id + "#k=" + key; kind = "short"; }
-        } catch (err) { /* fall back to a link that carries the letter itself */ }
+          const j = await r.json().catch(() => ({}));
+          if (r.ok && j.id) { link = location.origin + "/s/" + j.id + "#k=" + key; kind = "short"; }
+          else why = r.status === 413 ? "too_large" : j.error || "storage_error";
+        } catch (err) { why = "unreachable"; } // fall back to a link that carries the letter itself
       }
       if (!link) link = (mode === "static" ? new URL("letter.html", location.href).href : location.origin + "/l") + "#" + fragment;
-      current = { link, fragment, letter, kind };
+      current = { link, fragment, letter, kind, why };
       showResult();
     } catch (err) {
       toast("Something went wrong sealing the letter. Try again.");
@@ -255,6 +282,10 @@
     else notes.push("Send this link. The whole letter lives inside it (after the #) and is stored nowhere else.");
     if (kind === "long" && link.length > 6000) notes.push("It is a long link because of what's tucked inside, and some chat apps cut long links short. If it arrives broken, send the keepsake file instead.");
     $("resultNote").textContent = notes.join(" ");
+    // when a short link was expected but not made, say why, plainly and where it can't be missed
+    const why = $("resultWhy");
+    why.hidden = kind === "short" || current.why === "folder";
+    why.textContent = why.hidden ? "" : whyNoShortLink(current.why);
     $("link").textContent = link;
     $("open").href = link;
     $("share").hidden = !navigator.share;
@@ -329,7 +360,8 @@
     $("qrstyle").textContent = plainQR ? "Back to the heart QR" : "Not scanning? Use a plain QR";
     const tip = $("qrtip");
     tip.classList.toggle("warn", !ok || location.protocol === "file:");
-    if (!ok) tip.textContent = "This letter is too big for a QR code: with photos, a voice note or many words the link grows longer than a code can hold. Once the site is online with short links switched on (see the README), every letter fits in a QR code. For now, a shorter letter without attachments will fit.";
+    if (!ok) tip.textContent = "This letter is too big for a QR code: it travels inside its own link, and with photos, a voice note or many words that link grows longer than a code can hold. " +
+      (current.why === "folder" ? "Put the site online with short links switched on (see the README) and every letter fits in a QR code." : "With short links working, every letter fits in a QR code; the note above says what's in the way.");
     else if (location.protocol === "file:") tip.textContent = "This code points to a file on this computer, so it only opens here. Put the site online and the code will open the letter on any phone.";
     else if (!heart && !plainQR) tip.textContent = "This link is too long for the heart shape, so here is a plain code. Print it and tuck it into a card or a gift.";
     else tip.textContent = "Print it and tuck it into a card or a gift.";

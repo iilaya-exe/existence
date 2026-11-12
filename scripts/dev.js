@@ -1,5 +1,6 @@
 // Local stand-in for Vercel: serves the files, the /l and /s/<id> routes, and the short-link API.
-// Without Upstash keys in the environment, letters are kept in memory until you stop it.
+// Without a Redis database in the environment (REDIS_URL, KV_REST_API_URL…), letters are kept in
+// memory until you stop it.
 //   npm run dev            (http://localhost:8080)
 //   PORT=3000 npm run dev
 const http = require("http");
@@ -12,14 +13,12 @@ process.chdir(root);
 const page = (req, res) => { delete require.cache[require.resolve("../api/l.js")]; return require("../api/l.js")(req, res); };
 const letters = require("../api/letters.js");
 
-const memory = new Map();
-const memoryStore = {
-  get: async (k) => (memory.has(k) ? memory.get(k) : null),
-  setNew: async (k, v) => (memory.has(k) ? false : (memory.set(k, v), true)),
-  hit: async (k) => { memory.set(k, (memory.get(k) || 0) + 1); return memory.get(k); },
-};
-const hasUpstash = !!((process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL) && (process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN));
-const api = process.env.NO_STORE ? letters.createHandler({ store: null }) : hasUpstash ? letters : letters.createHandler({ store: memoryStore });
+// a Redis found in the environment (as on Vercel) is used for real; otherwise letters live in memory
+const found = letters.detect(process.env);
+const api = process.env.NO_STORE ? letters.createHandler({ store: null })
+  : found.store ? letters
+  : letters.createHandler({ store: require("./memory-store.js")() });
+const storeName = process.env.NO_STORE ? "off" : found.store ? found.store.kind : "in memory";
 
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg", ".mp3": "audio/mpeg", ".svg": "image/svg+xml" };
 
@@ -41,4 +40,4 @@ http.createServer((req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.end(data);
   });
-}).listen(process.env.PORT || 8080, () => console.log(`Tenderly on http://localhost:${process.env.PORT || 8080}  (short links: ${process.env.NO_STORE ? "off" : hasUpstash ? "Upstash" : "in memory"})`));
+}).listen(process.env.PORT || 8080, () => console.log(`Tenderly on http://localhost:${process.env.PORT || 8080}  (short links: ${storeName})`));

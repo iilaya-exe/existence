@@ -146,6 +146,7 @@ input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); 
 
 /* result */
 .result { border-color: rgba(181, 71, 107, 0.4); background: linear-gradient(180deg, #fdeef1, var(--card) 55%); }
+.why { margin: 12px 0 0; padding: 11px 14px; border-radius: 12px; background: #fff4e3; border: 1px solid #ecc995; color: #6b3d0c; font-size: 14px; line-height: 1.45; }
 .linkbox { margin-top: 14px; padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--line-strong); background: #fff; font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--ink); overflow-wrap: anywhere; max-height: 5.2em; overflow: hidden; user-select: all; -webkit-user-select: all; }
 .qrbox { margin-top: 16px; display: grid; justify-items: center; gap: 4px; }
 .qrdraw { display: grid; justify-items: center; }

@@ -34,14 +34,31 @@ links; drafts that save themselves; and a keepsake file.
 ## Deploy on Vercel
 
 1. Import this repository in Vercel. There is no build step and no framework to choose.
-2. For short links and QR codes of long letters, add storage: in the project, **Storage →
-   Upstash for Redis → Create**, and connect it to the project. Vercel adds the
-   `KV_REST_API_URL` and `KV_REST_API_TOKEN` variables by itself. Redeploy.
+2. For short links (and QR codes for letters with photos or a voice note), connect a Redis
+   database: in the project, **Storage → Upstash for Redis** (or any Redis from the
+   Marketplace) **→ Connect**. Any variable prefix works.
+3. **Redeploy** (Deployments → ⋯ → Redeploy). A newly connected database only reaches
+   deployments made after it.
 
-Without step 2 everything still works; links are simply long, because they hold the letter.
-A QR code can only hold so much, so without short links only shorter letters with nothing
-tucked in fit in one. With short links every letter does.
-A stored letter is at most about 3 MB (four photos and a one-minute voice note fit easily).
+Without a database everything still works; links are simply long, because they hold the letter,
+and a letter with photos or a voice note is then too big for a QR code.
+
+### Short links or QR codes not working?
+
+Open `https://<your-site>/api/letters` in a browser. It says what the site sees:
+
+| It says | What to do |
+| --- | --- |
+| `"ok": true` | Short links work. Seal a new letter (old ones keep their long links). |
+| `"reason": "no_storage"` | No Redis database reaches this deployment. Connect one (step 2), then redeploy (step 3). |
+| `"reason": "unsupported", "other": "Postgres"` | The connected database isn't Redis. Add Upstash for Redis as well. |
+| `"reason": "auth"` or `"readonly"` | The database refused the site's password or token. Reconnect it in Storage, then redeploy. |
+| `"reason": "unreachable"` | The site can't reach the database. Check it is running in Storage. |
+
+When a letter can't get a short link, the composer also says why, right under the link.
+
+Large letters are stored in pieces of about 0.7 MB, so they fit within any Redis plan's request
+limit. A letter can hold up to about 3 MB (four photos and a one-minute voice note fit easily).
 
 ## Run it locally
 
@@ -50,7 +67,8 @@ npm run dev
 ```
 
 Opens on http://localhost:8080 with the same routes as Vercel. Short links are kept in memory
-until you stop it. `NO_STORE=1 npm run dev` shows how the site behaves without storage.
+until you stop it, or in a real Redis if `REDIS_URL` (or Upstash's `KV_REST_API_URL` and
+`KV_REST_API_TOKEN`) is set. `NO_STORE=1 npm run dev` shows how the site behaves without storage.
 
 You can also just open `index.html` from the folder. Writing, the live preview and sending all
 work that way; links are long ones that point at the `letter.html` beside it, and the keepsake
